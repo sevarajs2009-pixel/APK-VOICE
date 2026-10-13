@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Login — VoiceToPara</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: white;
+      overflow: hidden;
+
+      background:
+        radial-gradient(circle at 12% 15%, rgba(99,102,241,0.35), transparent 30%),
+        radial-gradient(circle at 88% 85%, rgba(168,85,247,0.30), transparent 30%),
+        linear-gradient(135deg, #050816, #0b1026, #050816);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      position: relative;
+    }
+
+    /* =====================================================
+       BACKGROUND ORBS
+    ===================================================== */
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(85px);
+      opacity: 0.42;
+      pointer-events: none;
+
+      animation: floatingOrb 9s ease-in-out infinite;
+    }
+
+    .orb.one {
+      width: 280px;
+      height: 280px;
+      background: #6366f1;
+
+      top: -90px;
+      left: -80px;
+    }
+
+    .orb.two {
+      width: 320px;
+      height: 320px;
+      background: #a855f7;
+
+      right: -120px;
+      bottom: -120px;
+
+      animation-delay: -3s;
+    }
+
+    .orb.three {
+      width: 190px;
+      height: 190px;
+      background: #06b6d4;
+
+      right: 14%;
+      top: 8%;
+
+      opacity: 0.15;
+
+      animation-delay: -5s;
+    }
+
+    @keyframes floatingOrb {
+      0%,
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      50% {
+        transform: translate(30px, -25px) scale(1.08);
+      }
+    }
+
+    /* =====================================================
+       PARTICLES
+    ===================================================== */
+
+    .particles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+
+      width: 3px;
+      height: 3px;
+
+      border-radius: 50%;
+
+      background: rgba(255,255,255,0.7);
+
+      animation: particleMove linear infinite;
+    }
+
+    @keyframes particleMove {
+      from {
+        transform: translateY(110vh);
+        opacity: 0;
+      }
+
+      20% {
+        opacity: 0.8;
+      }
+
+      80% {
+        opacity: 0.8;
+      }
+
+      to {
+        transform: translateY(-10vh);
+        opacity: 0;
+      }
+    }
+
+    /* =====================================================
+       MAIN CONTAINER
+    ===================================================== */
+
+    .container {
+      width: min(92%, 430px);
+
+      position: relative;
+      z-index: 5;
+    }
+
+    /* =====================================================
+       GLASS CARD
+    ===================================================== */
+
+    .card {
+      padding: 42px 34px;
+
+      border-radius: 30px;
+
+      background: rgba(15, 23, 42, 0.68);
+
+      border: 1px solid rgba(255,255,255,0.12);
+
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+
+      box-shadow:
+        0 30px 80px rgba(0,0,0,0.45),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+
+      animation: cardAppear 0.8s ease forwards;
+    }
+
+    @keyframes cardAppear {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* =====================================================
+       NEW VOICE-TO-TEXT ICON
+    ===================================================== */
+
+    .logo-wrapper {
+      display: flex;
+      justify-content: center;
+
+      margin-bottom: 23px;
+    }
+
+    .logo {
+      width: 88px;
+      height: 88px;
+
+      border-radius: 27px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      position: relative;
+
+      background:
+        linear-gradient(
+          135deg,
+          #6366f1,
+          #8b5cf6 50%,
+          #ec4899
+        );
+
+      box-shadow:
+        0 18px 45px rgba(99,102,241,0.35);
+
+      animation: logoFloat 3.5s ease-in-out infinite;
+    }
+
+    .logo::before {
+      content: "";
+
+      position: absolute;
+      inset: -6px;
+
+      border-radius: 31px;
+
+      border: 1px solid rgba(255,255,255,0.18);
+
+      animation: logoRing 2.8s ease-in-out infinite;
+    }
+
+    @keyframes logoFloat {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-7px);
+      }
+    }
+
+    @keyframes logoRing {
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.4;
+      }
+
+      50% {
+        transform: scale(1.08);
+        opacity: 0.05;
+      }
+    }
+
+    /*
+      Voice waveform
+    */
+
+    .wave {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      height: 38px;
+    }
+
+    .wave span {
+      width: 5px;
+
+      border-radius: 10px;
+
+      background: white;
+
+      animation: voiceWave 1.1s ease-in-out infinite;
+    }
+
+    .wave span:nth-child(1) {
+      height: 13px;
+      animation-delay: -0.9s;
+    }
+
+    .wave span:nth-child(2) {
+      height: 25px;
+      animation-delay: -0.7s;
+    }
+
+    .wave span:nth-child(3) {
+      height: 38px;
+      animation-delay: -0.5s;
+    }
+
+    .wave span:nth-child(4) {
+      height: 27px;
+      animation-delay: -0.3s;
+    }
+
+    .wave span:nth-child(5) {
+      height: 15px;
+      animation-delay: -0.1s;
+    }
+
+    @keyframes voiceWave {
+      0%,
+      100% {
+        transform: scaleY(0.65);
+        opacity: 0.65;
+      }
+
+      50% {
+        transform: scaleY(1);
+        opacity: 1;
+      }
+    }
+
+    /* =====================================================
+       BRAND
+    ===================================================== */
+
+    .title {
+      text-align: center;
+
+      font-size: 34px;
+      font-weight: 800;
+
+      letter-spacing: -1px;
+
+      background:
+        linear-gradient(
+          90deg,
+          #818cf8,
+          #c084fc,
+          #f472b6
+        );
+
+      -webkit-background-clip: text;
+      background-clip: text;
+
+      color: transparent;
+
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+
+      color: #a5b4fc;
+
+      font-size: 15px;
+
+      line-height: 1.5;
+
+      margin-bottom: 34px;
+    }
+
+    /* =====================================================
+       LOGIN TEXT
+    ===================================================== */
+
+    .login-title {
+      text-align: center;
+
+      font-size: 21px;
+      font-weight: 700;
+
+      margin-bottom: 8px;
+    }
+
+    .login-description {
+      text-align: center;
+
+      color: #94a3b8;
+
+      font-size: 13px;
+
+      margin-bottom: 24px;
+    }
+
+    /* =====================================================
+       GOOGLE BUTTON
+    ===================================================== */
+
+    .google-button {
+      width: 100%;
+      height: 60px;
+
+      position: relative;
+      overflow: hidden;
+
+      border: 1px solid rgba(255,255,255,0.13);
+
+      border-radius: 17px;
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255,255,255,0.08),
+          rgba(255,255,255,0.035)
+        );
+
+      color: white;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      gap: 12px;
+
+      font-size: 15px;
+      font-weight: 700;
+
+      cursor: pointer;
+
+      isolation: isolate;
+
+      transition:
+        transform 0.35s cubic-bezier(.2,.8,.2,1),
+        border-color 0.35s ease,
+        box-shadow 0.35s ease,
+        background 0.35s ease;
+    }
+
+    /*
+      Moving light sweep
+    */
+
+    .google-button::before {
+      content: "";
+
+      position: absolute;
+
+      top: 0;
+      left: -120%;
+
+      width: 80%;
+      height: 100%;
+
+      background:
+        linear-gradient(
+          100deg,
+          transparent,
+          rgba(255,255,255,0.18),
+          transparent
+        );
+
+      transform: skewX(-20deg);
+
+      transition: left 0.65s ease;
+
+      pointer-events: none;
+
+      z-index: -1;
+    }
+
+    /*
+      Animated gradient glow
+    */
+
+    .google-button::after {
+      content: "";
+
+      position: absolute;
+
+      inset: -2px;
+
+      border-radius: 18px;
+
+      background:
+        linear-gradient(
+          90deg,
+          #4285f4,
+          #34a853,
+          #fbbc05,
+          #ea4335,
+          #4285f4
+        );
+
+      background-size: 300% 100%;
+
+      opacity: 0;
+
+      z-index: -2;
+
+      transition: opacity 0.35s ease;
+
+      animation: googleBorder 4s linear infinite;
+    }
+
+    @keyframes googleBorder {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      100% {
+        background-position: 300% 50%;
+      }
+    }
+
+    /*
+      PREMIUM HOVER
+    */
+
+    .google-button:hover {
+      transform: translateY(-4px);
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255,255,255,0.13),
+          rgba(255,255,255,0.055)
+        );
+
+      border-color: rgba(255,255,255,0.28);
+
+      box-shadow:
+        0 18px 40px rgba(0,0,0,0.28),
+        0 0 25px rgba(66,133,244,0.12),
+        0 0 25px rgba(234,67,53,0.08);
+    }
+
+    .google-button:hover::before {
+      left: 140%;
+    }
+
+    .google-button:hover::after {
+      opacity: 0.75;
+    }
+
+    /*
+      Google icon
+    */
+
+    .google-icon {
+      width: 22px;
+      height: 22px;
+
+      flex-shrink: 0;
+
+      transition:
+        transform 0.4s cubic-bezier(.2,.8,.2,1),
+        filter 0.35s ease;
+    }
+
+    .google-button:hover .google-icon {
+      transform:
+        rotate(-8deg)
+        scale(1.14);
+
+      filter:
+        drop-shadow(0 0 7px rgba(255,255,255,0.25));
+    }
+
+    /*
+      Button text
+    */
+
+    #buttonText {
+      transition:
+        transform 0.35s ease,
+        letter-spacing 0.35s ease;
+    }
+
+    .google-button:hover #buttonText {
+      transform: translateX(2px);
+
+      letter-spacing: 0.2px;
+    }
+
+    /*
+      Click
+    */
+
+    .google-button:active {
+      transform: translateY(-1px) scale(0.985);
+
+      box-shadow:
+        0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    /*
+      Disabled
+    */
+
+    .google-button:disabled {
+      cursor: wait;
+      opacity: 0.75;
+    }
+
+    /* =====================================================
+       LOADING
+    ===================================================== */
+
+    .loading {
+      display: none;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 9px;
+    }
+
+    .loading.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+
+      border: 2px solid rgba(255,255,255,0.25);
+
+      border-top-color: white;
+
+      border-radius: 50%;
+
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* =====================================================
+       MESSAGE
+    ===================================================== */
+
+    .message {
+      min-height: 20px;
+
+      margin-top: 16px;
+
+      text-align: center;
+
+      font-size: 13px;
+
+      line-height: 1.4;
+
+      color: #fca5a5;
+    }
+
+    /* =====================================================
+       DIVIDER
+    ===================================================== */
+
+    .divider {
+      display: flex;
+      align-items: center;
+
+      gap: 12px;
+
+      margin: 25px 0;
+    }
+
+    .divider-line {
+      flex: 1;
+
+      height: 1px;
+
+      background: rgba(255,255,255,0.09);
+    }
+
+    .divider-text {
+      color: #64748b;
+
+      font-size: 11px;
+
+      letter-spacing: 1.5px;
+    }
+
+    /* =====================================================
+       SIGN UP
+    ===================================================== */
+
+    .signup {
+      text-align: center;
+
+      color: #94a3b8;
+
+      font-size: 13px;
+    }
+
+    .signup a {
+      color: #a78bfa;
+
+      text-decoration: none;
+
+      font-weight: 700;
+
+      transition:
+        color 0.2s ease,
+        text-shadow 0.2s ease;
+    }
+
+    .signup a:hover {
+      color: #c4b5fd;
+
+      text-shadow:
+        0 0 12px rgba(167,139,250,0.5);
+    }
+
+    /* =====================================================
+       SECURITY
+    ===================================================== */
+
+    .security {
+      margin-top: 28px;
+
+      text-align: center;
+
+      color: #64748b;
+
+      font-size: 11px;
+
+      display: flex;
+
+      justify-content: center;
+
+      align-items: center;
+
+      gap: 6px;
+    }
+
+    .lock {
+      font-size: 13px;
+    }
+
+    /* =====================================================
+       MOBILE
+    ===================================================== */
+
+    @media (max-width: 480px) {
+
+      .card {
+        padding: 34px 22px;
+
+        border-radius: 24px;
+      }
+
+      .title {
+        font-size: 29px;
+      }
+
+      .logo {
+        width: 76px;
+        height: 76px;
+      }
+
+      .google-button {
+        height: 56px;
+      }
+    }
+
+  </style>
+</head>
+
+
+<body>
+
+  <!-- =====================================================
+       BACKGROUND
+  ===================================================== -->
+
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+  <div class="orb three"></div>
+
+  <div
+    class="particles"
+    id="particles"
+  ></div>
+
+
+  <!-- =====================================================
+       MAIN
+  ===================================================== -->
+
+  <main class="container">
+
+    <section class="card">
+
+
+      <!-- =================================================
+           VOICE-TO-TEXT LOGO
+      ================================================== -->
+
+      <div class="logo-wrapper">
+
+        <div class="logo">
+
+          <div class="wave">
+
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           BRAND
+      ================================================== -->
+
+      <h1 class="title">
+        VoiceToPara
+      </h1>
+
+      <p class="subtitle">
+        Turn your voice into powerful text.
+      </p>
+
+
+      <!-- =================================================
+           LOGIN
+      ================================================== -->
+
+      <h2 class="login-title">
+        Welcome back
+      </h2>
+
+      <p class="login-description">
+        Continue to your VoiceToPara workspace
+      </p>
+
+
+      <!-- =================================================
+           GOOGLE LOGIN
+      ================================================== -->
+
+      <button
+        id="googleLogin"
+        class="google-button"
+        type="button"
+      >
+
+        <!-- Google G icon -->
+
+        <svg
+          class="google-icon"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+
+          <path
+            fill="#4285F4"
+            d="M21.35 12.23c0-.79-.07-1.55-.2-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.91-4.18 2.91-7.41z"
+          />
+
+          <path
+            fill="#34A853"
+            d="M12 21.75c2.63 0 4.84-.87 6.45-2.35l-3.14-2.44c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.29v2.52A9.75 9.75 0 0 0 12 21.75z"
+          />
+
+          <path
+            fill="#FBBC05"
+            d="M6.54 13.86A5.86 5.86 0 0 1 6.23 12c0-.65.11-1.28.31-1.86V7.62H3.29A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.04 4.38l3.25-2.52z"
+          />
+
+          <path
+            fill="#EA4335"
+            d="M12 6.11c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.83 3.17 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.71 5.37l3.25 2.52C7.31 7.83 9.46 6.11 12 6.11z"
+          />
+
+        </svg>
+
+
+        <span id="buttonText">
+          Continue with Google
+        </span>
+
+
+        <div
+          id="loading"
+          class="loading"
+        >
+
+          <div class="spinner"></div>
+
+          <span>
+            Signing in...
+          </span>
+
+        </div>
+
+      </button>
+
+
+      <!-- Error -->
+      <div
+        id="message"
+        class="message"
+      ></div>
+
+
+      <!-- =================================================
+           DIVIDER
+      ================================================== -->
+
+      <div class="divider">
+
+        <div class="divider-line"></div>
+
+        <span class="divider-text">
+          VOICETOPARA
+        </span>
+
+        <div class="divider-line"></div>
+
+      </div>
+
+
+      <!-- =================================================
+           SIGN UP LINK
+      ================================================== -->
+
+      <div class="signup">
+
+        Don't have an account?
+
+        <a href="index.html">
+          Sign Up
+        </a>
+
+      </div>
+
+
+      <!-- =================================================
+           SECURITY
+      ================================================== -->
+
+      <div class="security">
+
+        <span class="lock">
+          🔒
+        </span>
+
+        <span>
+          Secure Google authentication
+        </span>
+
+      </div>
+
+
+    </section>
+
+  </main>
+
+
+  <!-- =====================================================
+       FIREBASE
+  ===================================================== -->
+    <script type="module">
+
+  import {
+    auth,
+    googleProvider,
+    signInWithPopup
+  } from "./firebase-config.js";
+
+
+  // Login page elements
+  const googleButton =
+    document.getElementById("googleLogin");
+
+  const buttonText =
+    document.getElementById("buttonText");
+
+  const loading =
+    document.getElementById("loading");
+
+  const message =
+    document.getElementById("message");
+
+
+  // Google Login
+  googleButton.addEventListener("click", async () => {
+
+    // Reset message
+    message.textContent = "";
+
+    // Disable button
+    googleButton.disabled = true;
+
+    // Show loading
+    buttonText.style.display = "none";
+    loading.classList.add("active");
+
+
+    try {
+
+      // Open Google login
+      const result =
+        await signInWithPopup(
+          auth,
+          googleProvider
+        );
+
+
+      console.log(
+        "Google login successful:",
+        result.user
+      );
+
+
+      // Login successful
+      window.location.href = "voice.html";
+
+
+    } catch (error) {
+
+      console.error(
+        "Google login error:",
+        error
+      );
+
+
+      // Show error
+      message.textContent =
+        error.message ||
+        "Google login failed. Please try again.";
+
+
+      // Restore button
+      googleButton.disabled = false;
+
+      buttonText.style.display = "inline";
+
+      loading.classList.remove("active");
+
+    }
+
+  });
+
+
+  // Background particles
+  const particles =
+    document.getElementById("particles");
+
+
+  if (particles) {
+
+    for (let i = 0; i < 35; i++) {
+
+      const particle =
+        document.createElement("div");
+
+      particle.className =
+        "particle";
+
+      particle.style.left =
+        Math.random() * 100 + "%";
+
+      particle.style.animationDuration =
+        (6 + Math.random() * 10) + "s";
+
+      particle.style.animationDelay =
+        (Math.random() * 8) + "s";
+
+      particle.style.opacity =
+        0.2 + Math.random() * 0.7;
+
+      particles.appendChild(particle);
+
+    }
+
+  }
+
+</script>
+</body>
+</html>

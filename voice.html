@@ -1,0 +1,2582 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice to Paragraph Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* INPUT VOICE: small by default */
+#inputVoiceBox {
+    height: 100px;
+    min-height: 100px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    transition: height 0.2s ease;
+}
+
+/* Keep the textarea area within the small box */
+#inputVoiceBox:not(.input-voice-expanded) .input-voice-content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px 16px;
+}
+
+#inputVoiceBox:not(.input-voice-expanded) #paragraphOutput {
+    height: 100%;
+    min-height: 0;
+    resize: none;
+}
+
+/* Expand only INPUT VOICE, centered over the page */
+#inputVoiceBox.input-voice-expanded {
+    position: relative;
+    transform: none;
+    width: 100%;
+    height: 23vh;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    z-index: 1;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+/* Let the expanded textarea fill the available space */
+#inputVoiceBox.input-voice-expanded .input-voice-content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#inputVoiceBox.input-voice-expanded #paragraphOutput {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    resize: none;
+}
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.8); }
+        select option {
+            background-color: #ffffff;
+            color: #1e293b;
+        }
+        .dark select option {
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        /* Hide INPUT VOICE boxes in both workspaces */
+#inputVoiceBox,
+#input2VoiceBox {
+    display: none !important;
+}
+/* VoiceToPara: landscape-friendly mobile layout */
+@media screen and (orientation: landscape) and (max-height: 600px) {
+    body {
+        min-height: 100vh;
+    }
+
+    header {
+        padding: 0.5rem 1rem !important;
+    }
+
+    header .w-10.h-10 {
+        width: 2rem !important;
+        height: 2rem !important;
+    }
+
+    main {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.75rem !important;
+        gap: 0.75rem !important;
+    }
+
+    main > * {
+        margin-top: 0 !important;
+    }
+
+    main .rounded-2xl.p-6 {
+        padding: 0.75rem !important;
+    }
+
+    #pttButton {
+        width: 4.5rem !important;
+        height: 4.5rem !important;
+    }
+
+    #visualizer {
+        margin-top: 0.25rem !important;
+    }
+}
+
+/* Make the page fit smaller mobile screens without forcing rotation */
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+/* VoiceToPara: preserve the existing design and arrange both workspaces
+   side by side when the screen is wide and in landscape orientation. */
+
+/* VoiceToPara: align both workspaces in landscape without redesigning */
+
+/* VoiceToPara: align the two workspaces in landscape */
+@media screen and (orientation: landscape) and (min-width: 700px) {
+    main {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-template-areas:
+            "ptt1 ptt2"
+            "out1 out2" !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+    }
+
+    main > * {
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* First microphone panel */
+    main > div:nth-child(1) {
+        grid-area: ptt1 !important;
+        min-width: 0 !important;
+    }
+
+    /* Hide the separate input box in landscape */
+    #inputVoiceBox {
+        display: none !important;
+    }
+
+    /* First output panel */
+    main > div:nth-child(3) {
+        grid-area: out1 !important;
+        min-width: 0 !important;
+    }
+
+    /* Hide the formatting selector */
+    main > div:nth-child(4) {
+        display: none !important;
+    }
+
+    /* Allow the second workspace panels to join the main grid */
+    #workspace2 {
+        display: contents !important;
+    }
+
+    #workspace2 > h2 {
+        display: none !important;
+    }
+
+    /* Second microphone panel */
+    #workspace2 > div:nth-of-type(1) {
+        grid-area: ptt2 !important;
+        min-width: 0 !important;
+    }
+
+    /* Hide the separate second input box in landscape */
+    #input2VoiceBox {
+        display: none !important;
+    }
+
+    /* Second output panel */
+    #workspace2 > div:nth-of-type(3) {
+        grid-area: out2 !important;
+        min-width: 0 !important;
+    }
+
+    /* Keep output headers within each column */
+    main > div:nth-child(3) > div:first-child,
+    #workspace2 > div:nth-of-type(3) > div:first-child {
+        min-width: 0 !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    main > div:nth-child(3) > div:first-child > *,
+    #workspace2 > div:nth-of-type(3) > div:first-child > * {
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+}
+
+    
+
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 flex flex-col">
+
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                <i class="fa-solid fa-microphone-lines text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight">VoiceToPara <span class="text-brand-600 text-xs uppercase px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 font-semibold ml-1">Studio</span></h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Push-To-Talk Speech to Paragraph Converter</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button id="themeToggleBtn" class="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Toggle Theme">
+                <i class="fa-solid fa-moon dark:hidden"></i>
+                <i class="fa-solid fa-sun hidden dark:inline"></i>
+            </button>
+            <button id="openHistoryBtn" class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center space-x-2">
+                <i class="fa-solid fa-bookmark"></i>
+                <span class="hidden sm:inline">Saved Notes (<span id="savedNotesBadgeCount">0</span>)</span>
+            </button>
+        </div>
+    </header>
+
+
+   
+
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col space-y-6">
+
+        <!-- PTT Box with Embedded Tab Switcher (Placed at the top) -->
+            <div class="md:col-span-7 bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-transparent border border-brand-500/30 rounded-2xl p-6 text-center flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                
+                <!-- Animated Tab Switcher INSIDE the PTT Box -->
+                <div class="relative w-full max-w-[240px] flex bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl shadow-inner mb-4">
+                    <div id="tabIndicator" class="absolute top-1 bottom-1 w-[calc(50%-4px)] left-1 bg-white dark:bg-slate-900 rounded-lg shadow-md transition-all duration-300 ease-in-out"></div>
+                    <button id="tabHold" class="relative z-10 flex-1 py-1.5 text-xs font-bold text-center text-brand-600 dark:text-brand-400 transition-colors flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-hand-pointer text-[10px]"></i>
+                        <span>Hold to Talk</span>
+                    </button>
+                    <button id="tabToggle" class="relative z-10 flex-1 py-1.5 text-xs font-bold text-center text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-toggle-on text-[10px]"></i>
+                        <span>Click Toggle</span>
+                    </button>
+                </div>
+
+                <div id="statusIndicator" class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium mb-4">
+                    <span class="w-2 h-2 rounded-full bg-slate-400" id="statusDot"></span>
+                    <span id="statusText">Microphone ready</span>
+                </div>
+
+                <!-- PTT Button -->
+                <button id="pttButton" class="w-24 h-24 rounded-full bg-gradient-to-tr from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white shadow-xl shadow-brand-600/30 flex flex-col items-center justify-center transform active:scale-95 transition-all focus:outline-none focus:ring-4 focus:ring-brand-500/40 relative group">
+                    <div class="absolute inset-0 rounded-full border-4 border-white/20 animate-pulse hidden" id="pttPulseRing"></div>
+                    <i class="fa-solid fa-microphone text-2xl mb-1 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-[10px] font-bold tracking-wider uppercase" id="pttButtonLabel">HOLD TO TALK</span>
+                </button>
+               
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" id="pttInstruction">Press & hold spacebar or click button to speak</p>
+                <!-- Shared user name -->
+<div class="mt-4 w-full max-w-xs">
+    <label for="userNameInput"
+        class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+        User name
+    </label>
+    <input
+        id="userNameInput"
+        type="text"
+        placeholder="Enter your name"
+        autocomplete="name"
+        class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+    />
+</div>
+
+<p id="userNameDisplay1"
+    class="mt-2 text-sm font-semibold text-brand-600 dark:text-brand-400">
+    User: —
+</p>
+<!-- Language the user will speak -->
+<div class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl mb-4">
+    <i class="fa-solid fa-microphone text-brand-600 text-xs"></i>
+    <label for="speechLanguageSelect" class="text-xs font-semibold text-slate-600 dark:text-slate-300">
+        Speak in:
+    </label>
+    <select id="speechLanguageSelect"
+        class="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer">
+        <option value="en-US">English (US)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="hi-IN">Hindi (हिन्दी)</option>
+        <option value="ta-IN">Tamil (தமிழ்)</option>
+        <option value="te-IN">Telugu (తెలుగు)</option>
+        <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+        <option value="ml-IN">Malayalam (മലയാളം)</option>
+        <option value="bn-IN">Bengali (বাংলা)</option>
+        <option value="mr-IN">Marathi (मराठी)</option>
+        <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+        <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+        <option value="es-ES">Spanish</option>
+        <option value="fr-FR">French</option>
+        <option value="de-DE">German</option>
+        <option value="ar-SA">Arabic</option>
+        <option value="zh-CN">Chinese (Simplified)</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="ko-KR">Korean</option>
+        <option value="it-IT">Italian</option>
+        <option value="pt-BR">Portuguese</option>
+        <option value="ru-RU">Russian</option>
+    </select>
+</div>
+                
+            </div>
+              
+<!-- INPUT Box -->
+<div id="inputVoiceBox" class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+    <!-- INPUT VOICE Header -->
+    <div id="inputVoiceHeader" title="Click to expand or shrink INPUT VOICE" class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-100 flex items-center">
+            <i class="fa-solid fa-file-lines text-brand-600 mr-2"></i>
+            INPUT VOICE
+        </h2>
+    </div>
+
+    <!-- Editable INPUT -->
+    <div class="p-6 relative flex flex-col flex-1 input-voice-content">
+        <textarea
+            id="paragraphOutput"
+            class="w-full min-h-[240px] bg-transparent resize-y focus:outline-none text-base leading-relaxed text-slate-700 dark:text-slate-200 placeholder-slate-400"
+            placeholder="Your paragraph output will appear here..."
+        ></textarea>
+    </div>
+
+</div>
+
+            <!-- Top Panel: Live Transcript & Paragraphs Editor -->
+        <div class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden min-h-[420px]">
+            
+            <!-- Reorganized Header Toolbar with distinct grouped sections -->
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
+                
+                <!-- Left Group: Title & Language Selector -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="font-semibold text-slate-800 dark:text-slate-100 flex items-center">
+                        <i class="fa-solid fa-file-pen text-brand-600 mr-2"></i>OUTPUT
+                    </h2>
+                    <div class="flex items-center space-x-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl shadow-sm">
+                        <i class="fa-solid fa-globe text-brand-600 text-xs"></i>
+                        <select id="languageSelect" class="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer">
+                            <optgroup label="Popular Languages">
+                                <option value="en-US">English (United States)</option>
+                                <option value="en-GB">English (United Kingdom)</option>
+                                <option value="hi-IN">Hindi (हिन्दी)</option>
+                                <option value="ta-IN">Tamil (தமிழ்)</option>
+                                <option value="te-IN">Telugu (తెలుగు)</option>
+                                <option value="es-ES">Spanish (Español)</option>
+                                <option value="fr-FR">French (Français)</option>
+                                <option value="de-DE">German (Deutsch)</option>
+                                <option value="zh-CN">Chinese Simplified (简体中文)</option>
+                                <option value="ja-JP">Japanese (日本語)</option>
+                            </optgroup>
+                            <optgroup label="Other Regional & Global Languages">
+                                <option value="ar-SA">Arabic (العربية)</option>
+                                <option value="bn-IN">Bengali (বাংলা)</option>
+                                <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+                                <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+                                <option value="ml-IN">Malayalam (മലയാളം)</option>
+                                <option value="mr-IN">Marathi (मराठी)</option>
+                                <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+                                <option value="it-IT">Italian (Italiano)</option>
+                                <option value="ko-KR">Korean (한국어)</option>
+                                <option value="nl-NL">Dutch (Nederlands)</option>
+                                <option value="pl-PL">Polish (Polski)</option>
+                                <option value="pt-BR">Portuguese (Português)</option>
+                                <option value="ru-RU">Russian (Русский)</option>
+                                <option value="tr-TR">Turkish (Türkçe)</option>
+                                <option value="vi-VN">Vietnamese (Tiếng Việt)</option>
+                                <option value="id-ID">Indonesian (Bahasa Indonesia)</option>
+                                <option value="th-TH">Thai (ไทย)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+                
+<!-- Compact OUTPUT Playback Speed -->
+<div class="w-full sm:w-52 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2">
+
+    <div class="flex items-center justify-between gap-2">
+        <label for="speechSpeed" class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <i class="fa-solid fa-gauge-high mr-1 text-brand-600"></i>
+            Speed
+        </label>
+        <span id="speechSpeedValue" class="text-xs font-bold text-brand-600 dark:text-brand-400">1.0×</span>
+    </div>
+
+    <input
+        id="speechSpeed"
+        type="range"
+        min="0.5"
+        max="2"
+        step="0.1"
+        value="1"
+        class="w-full accent-indigo-600 cursor-pointer"
+    />
+
+    <div class="flex justify-between text-[10px] text-slate-400">
+        <span>0.5×</span>
+        <span>2.0×</span>
+    </div>
+</div>
+<!-- End OUTPUT Audio Controls -->
+
+                <!-- Right Group: Clean Organized Action Buttons -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0">
+                    <button id="tellBtn" class="px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition flex items-center space-x-1.5 shrink-0" title="Read Aloud / Tell Content">
+                        <i class="fa-solid fa-volume-high"></i>
+                        <span>Tell</span>
+                    </button>
+                    <button id="liveShareBtn" class="px-3 py-1.5 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/50 text-xs font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-100 transition flex items-center space-x-1.5 shrink-0" title="Share Paragraph">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span>Share</span>
+                    </button>
+                    <button id="headerSaveBtn" class="px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-950/50 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-100 transition flex items-center space-x-1.5 shrink-0 relative" title="Save Note">
+                        <i class="fa-solid fa-bookmark"></i>
+                        <span>Save Note</span>
+                    </button>
+                    <button id="copyBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center space-x-1.5 shrink-0" title="Copy to clipboard">
+                        <i class="fa-regular fa-copy text-slate-500"></i>
+                        <span>Copy</span>
+                    </button>
+                    <button id="clearBtn" class="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition flex items-center space-x-1.5 shrink-0" title="Clear All Text">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                        <span>Clear</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editable Text Area -->
+            <div class="p-6 relative flex flex-col flex-1 input-voice-content">
+                <!-- Name from the second workspace -->
+<div id="output1NameHeading"
+     class="mb-3 text-sm font-semibold text-brand-600 dark:text-brand-400">
+    User: —
+</div>
+                <textarea id="transcriptEditor" class="w-full h-48 bg-transparent resize-y focus:outline-none text-base leading-relaxed text-slate-700 dark:text-slate-200 placeholder-slate-400" placeholder="Speak clearly or click PTT button below to dictate your thoughts into clean paragraphs..."></textarea>
+                
+                <!-- Live Interim Speech Notification Overlay -->
+                <div id="interimBadge" class="absolute bottom-4 left-6 hidden items-center space-x-2 bg-brand-50 dark:bg-brand-950/80 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 px-3 py-1.5 rounded-xl text-xs shadow-md backdrop-blur-sm animate-pulse">
+                    <i class="fa-solid fa-microphone-lines animate-bounce"></i>
+                    <span id="interimText" class="truncate max-w-md">Listening...</span>
+                </div>
+            </div>
+
+            <!-- Footer status / word count -->
+            <div class="px-6 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 bg-slate-50/30 dark:bg-slate-900/30">
+                <div class="flex items-center space-x-3 font-medium">
+                    <span id="wordCount">0 words</span>
+                    <span>•</span>
+                    <span id="charCount">0 chars</span>
+                </div>
+                <span class="text-brand-600 font-semibold"><i class="fa-solid fa-shield-halved mr-1"></i>Standard Accuracy Mode Active</span>
+            </div>
+        </div>
+
+        
+        
+
+        
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+            
+            <!-- Format Style Selector -->
+            <div class="hidden md:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-wand-magic-sparkles text-brand-600 mr-2"></i>Formatting Style</span>
+                        <span class="text-xs text-slate-400 font-normal">AI Structure</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-3" id="formatModeGroup">
+                        <button data-mode="paragraph" class="mode-btn p-3.5 rounded-xl border-2 border-brand-600 bg-brand-50/50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300 text-xs font-semibold text-left flex flex-col space-y-1.5 transition">
+                            <i class="fa-solid fa-align-left text-sm"></i>
+                            <span>Pro Paragraphs</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Standard structured</span>
+                        </button>
+                        <button data-mode="bullets" class="mode-btn p-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-transparent text-slate-700 dark:text-slate-300 text-xs font-semibold text-left flex flex-col space-y-1.5 transition hover:border-slate-300">
+                            <i class="fa-solid fa-list-ul text-sm"></i>
+                            <span>Bullet Points</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Key takeaways & lists</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                        <!-- SECOND INDEPENDENT WORKSPACE -->
+<section id="workspace2" class="w-full min-w-0 flex flex-col space-y-6">
+
+    <h2 class="text-lg font-bold text-emerald-600">SECOND WORKSPACE</h2>
+
+    <!-- SECOND PTT BOX -->
+    <div class="bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-transparent border border-brand-500/20 rounded-2xl p-6 text-center flex flex-col items-center">
+                    <div class="flex gap-2 mb-4 w-full max-w-xs">
+            <button id="ptt2Hold" class="flex-1 p-2 rounded-lg bg-emerald-600 text-white text-sm font-bold">Hold to Talk</button>
+            <button id="ptt2Toggle" class="flex-1 p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-sm font-bold">Click Toggle</button>
+        </div>
+
+        <p id="ptt2Status" class="text-sm mb-4">Microphone ready</p>
+
+
+        <button id="ptt2Button" class="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white shadow-xl flex flex-col items-center justify-center active:scale-95">
+            <i class="fa-solid fa-microphone text-2xl mb-1"></i>
+            <span id="ptt2Label" class="text-[10px] font-bold">HOLD TO TALK</span>
+        </button>
+
+        
+        <p id="ptt2Instruction" class="text-xs text-slate-500 mt-3">
+            Press and hold this button to speak
+        </p>
+
+        <p id="userNameDisplay2"
+    class="mt-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+    User: —
+</p>
+
+<!-- Second workspace name input -->
+<div class="mt-4 w-full max-w-xs">
+    <label for="userNameInput2"
+        class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+        User name
+    </label>
+    <input
+        id="userNameInput2"
+        type="text"
+        placeholder="Enter second user's name"
+        autocomplete="off"
+        class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+    />
+</div>
+
+
+        <div class="mt-4 flex items-center gap-2">
+            <label for="speechLanguage2" class="text-sm">Speak in:</label>
+            <select id="speechLanguage2" class="p-2 rounded-lg border dark:bg-slate-800">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="ta-IN">Tamil</option>
+                <option value="hi-IN">Hindi</option>
+                <option value="te-IN">Telugu</option>
+                <option value="kn-IN">Kannada</option>
+                <option value="ml-IN">Malayalam</option>
+                <option value="es-ES">Spanish</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+            </select>
+        </div>
+        
+    </div>
+
+    <!-- SECOND INPUT BOX -->
+    <div id="input2VoiceBox" class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <h3 class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-2 text-sm font-semibold">
+                            <i class="fa-solid fa-microphone-lines mr-2 text-brand-500"></i> SECOND INPUT VOICE
+        </h3>
+        
+        <textarea id="input2Text"
+            class="w-full min-h-[180px] px-4 py-3 bg-transparent resize-y focus:outline-none text-base leading-relaxed"
+            placeholder="Speech for the second workspace appears here..."></textarea>
+    </div>
+
+    <!-- SECOND OUTPUT BOX -->
+    <div class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+    <!-- SECOND OUTPUT HEADER — MATCH FIRST WORKSPACE -->
+<div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800
+            flex flex-col sm:flex-row items-stretch sm:items-center
+            justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
+
+    <!-- Left group: title and language selector -->
+    <div class="flex flex-wrap items-center gap-3">
+        <h3 class="font-semibold text-slate-800 dark:text-slate-100
+                   flex items-center text-sm">
+            <i class="fa-solid fa-file-pen text-emerald-500 mr-2"></i>
+            OUTPUT
+        </h3>
+
+        <div class="flex items-center space-x-1.5 bg-white dark:bg-slate-800
+                    border border-slate-200 dark:border-slate-700
+                    px-3 py-1.5 rounded-xl shadow-sm">
+            <i class="fa-solid fa-globe text-emerald-500 text-xs"></i>
+
+            <select id="outputLanguage2"
+                class="bg-transparent text-xs font-semibold
+                       text-slate-700 dark:text-slate-200
+                       focus:outline-none cursor-pointer">
+
+                <optgroup label="Popular Languages">
+                    <option value="en-US">English (United States)</option>
+                    <option value="en-GB">English (United Kingdom)</option>
+                    <option value="hi-IN">Hindi (हिन्दी)</option>
+                    <option value="ta-IN">Tamil (தமிழ்)</option>
+                    <option value="te-IN">Telugu (తెలుగు)</option>
+                    <option value="es-ES">Spanish (Español)</option>
+                    <option value="fr-FR">French (Français)</option>
+                    <option value="de-DE">German (Deutsch)</option>
+                    <option value="zh-CN">Chinese Simplified (简体中文)</option>
+                    <option value="ja-JP">Japanese (日本語)</option>
+                </optgroup>
+
+                <optgroup label="Other Regional & Global Languages">
+                    <option value="ar-SA">Arabic (العربية)</option>
+                    <option value="bn-IN">Bengali (বাংলা)</option>
+                    <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+                    <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+                    <option value="ml-IN">Malayalam (മലയാളം)</option>
+                    <option value="mr-IN">Marathi (मराठी)</option>
+                    <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+                    <option value="it-IT">Italian (Italiano)</option>
+                    <option value="ko-KR">Korean (한국어)</option>
+                    <option value="nl-NL">Dutch (Nederlands)</option>
+                    <option value="pl-PL">Polish (Polski)</option>
+                    <option value="pt-BR">Portuguese (Português)</option>
+                    <option value="ru-RU">Russian (Русский)</option>
+                    <option value="tr-TR">Turkish (Türkçe)</option>
+                    <option value="vi-VN">Vietnamese (Tiếng Việt)</option>
+                    <option value="id-ID">Indonesian (Bahasa Indonesia)</option>
+                    <option value="th-TH">Thai (ไทย)</option>
+                </optgroup>
+            </select>
+        </div>
+    </div>
+
+    <!-- Middle group: playback speed -->
+    <div class="w-full sm:w-52 shrink-0 rounded-lg
+                border border-slate-200 dark:border-slate-700
+                bg-white dark:bg-slate-900 px-3 py-2">
+
+        <div class="flex items-center justify-between gap-2">
+            <label for="output2Speed"
+                class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <i class="fa-solid fa-gauge-high mr-1 text-emerald-500"></i>
+                Speed
+            </label>
+
+            <span id="output2SpeedValue"
+                class="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                1.0×
+            </span>
+        </div>
+
+        <input
+            id="output2Speed"
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value="1"
+            class="w-full accent-indigo-600 cursor-pointer"
+        />
+
+        <div class="flex justify-between text-[10px] text-slate-400">
+            <span>0.5×</span>
+            <span>2.0×</span>
+        </div>
+    </div>
+
+    <!-- Right group: action buttons -->
+    <div class="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0">
+
+        <button id="tell2Btn" type="button"
+            class="px-3 py-1.5 rounded-lg border border-indigo-200
+                   dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50
+                   text-xs font-semibold text-indigo-700 dark:text-indigo-300
+                   hover:bg-indigo-100 transition flex items-center
+                   space-x-1.5 shrink-0"
+            title="Read second output aloud">
+            <i class="fa-solid fa-volume-high"></i>
+            <span>Tell</span>
+        </button>
+
+        <button id="share2Btn" type="button"
+            class="px-3 py-1.5 rounded-lg border border-sky-200
+                   dark:border-sky-800 bg-sky-50 dark:bg-sky-950/50
+                   text-xs font-semibold text-sky-700 dark:text-sky-300
+                   hover:bg-sky-100 transition flex items-center
+                   space-x-1.5 shrink-0"
+            title="Share second output">
+            <i class="fa-solid fa-share-nodes"></i>
+            <span>Share</span>
+        </button>
+
+        <button id="copy2Btn" type="button"
+            class="px-3 py-1.5 rounded-lg border border-slate-200
+                   dark:border-slate-700 bg-white dark:bg-slate-800
+                   text-xs font-medium text-slate-700 dark:text-slate-200
+                   hover:bg-slate-100 dark:hover:bg-slate-700
+                   transition flex items-center space-x-1.5 shrink-0"
+            title="Copy second output">
+            <i class="fa-regular fa-copy text-slate-500"></i>
+            <span>Copy</span>
+        </button>
+        
+<button id="clearOutput2Btn" type="button"
+    class="px-3 py-1.5 rounded-lg border border-rose-200
+           dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30
+           text-xs font-semibold text-rose-600 dark:text-rose-300
+           hover:bg-rose-100 dark:hover:bg-rose-900/50
+           transition flex items-center space-x-1.5 shrink-0"
+    title="Clear second output">
+    <i class="fa-solid fa-trash-can"></i>
+    <span>Clear</span>
+</button>
+
+
+    </div>
+</div>
+<!-- END SECOND OUTPUT HEADER -->
+    
+        
+<div class="w-full">
+    <div id="output2NameHeading"
+         class="px-4 pt-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+        User: —
+    </div>
+
+    <textarea id="output2Text"
+        class="w-full min-h-[180px] px-4 py-3 bg-transparent resize-y focus:outline-none text-base leading-relaxed"
+        placeholder="Second workspace output appears here..."></textarea>
+        <p id="ptt2Instruction" class="text-xs text-slate-500 mt-3">
+    Press and hold this button to speak
+</p>
+</div>
+
+
+        
+
+                    
+    
+
+    <!-- SECOND FORMATTING STYLE -->
+    <div class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+        <h3 class="font-semibold mb-3">Second Formatting Style</h3>
+        <div id="formatModeGroup2" class="grid grid-cols-2 gap-3">
+            <button type="button" data-mode="paragraph"
+                class="mode2-btn p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 text-sm font-semibold">
+                Pro Paragraphs
+            </button>
+            <button type="button" data-mode="bullets"
+                class="mode2-btn p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-sm font-semibold">
+                Bullet Points
+            </button>
+        </div>
+
+        <button id="translate2Btn" type="button"
+            class="mt-4 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">
+            Translate Second Output
+        </button>
+    </div>
+
+</section>
+<!-- END SECOND INDEPENDENT WORKSPACE -->
+
+</main>
+            
+
+    <div id="historyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                    <i class="fa-solid fa-bookmark text-brand-600"></i>
+                    <span>Saved Notes & Sharing Studio</span>
+                </h3>
+                <button id="closeHistoryModal" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-4" id="historyListContainer"></div>
+            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
+                <span class="text-xs text-slate-500 font-medium" id="historyCount">0 saved notes</span>
+                <button id="clearHistoryBtn" class="text-xs text-rose-600 dark:text-rose-400 font-semibold hover:underline">Clear All Saved Notes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 z-50 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center space-x-2">
+        <i class="fa-solid fa-circle-check text-brand-500"></i>
+        <span id="toastText">Action completed successfully</span>
+    </div>
+
+    <script>
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const pttButton = document.getElementById('pttButton');
+        // Separate name inputs for the two workspaces
+const userNameInput = document.getElementById('userNameInput');
+const userNameInput2 = document.getElementById('userNameInput2');
+
+const userNameDisplay1 = document.getElementById('userNameDisplay1');
+const userNameDisplay2 = document.getElementById('userNameDisplay2');
+
+const output1NameHeading = document.getElementById('output1NameHeading');
+const output2NameHeading = document.getElementById('output2NameHeading');
+
+const outputLanguage2 = document.getElementById('outputLanguage2');
+
+function updateUserNameDisplays() {
+    const name1 = userNameInput.value.trim() || '—';
+    const name2 = userNameInput2.value.trim() || '—';
+
+    userNameDisplay1.textContent = `User: ${name1}`;
+    userNameDisplay2.textContent = `User: ${name2}`;
+
+    function getSelectedLanguage(selectElement) {
+        if (!selectElement) return 'Language not selected';
+
+        const option = selectElement.options[selectElement.selectedIndex];
+        return option ? option.textContent.split('(')[0].trim() : 'Language not selected';
+    }
+
+    const language1 = getSelectedLanguage(languageSelect);
+    const language2 = getSelectedLanguage(outputLanguage2);
+
+    output1NameHeading.textContent = `${name2} — ${language2}`;
+    output2NameHeading.textContent = `${name1} — ${language1}`;
+}
+userNameInput.addEventListener('input', updateUserNameDisplays);
+userNameInput2.addEventListener('input', updateUserNameDisplays);
+
+
+        const pttButtonLabel = document.getElementById('pttButtonLabel');
+        const pttPulseRing = document.getElementById('pttPulseRing');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+        
+        const transcriptEditor = document.getElementById('transcriptEditor');
+        const paragraphOutput = document.getElementById('paragraphOutput');
+        const inputVoiceBox = document.getElementById('inputVoiceBox');
+const inputVoiceHeader = document.getElementById('inputVoiceHeader');
+
+inputVoiceHeader.addEventListener('click', () => {
+    inputVoiceBox.classList.toggle('input-voice-expanded');
+});
+        const wordCountEl = document.getElementById('wordCount');
+        const charCountEl = document.getElementById('charCount');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const tellBtn = document.getElementById('tellBtn');
+        const liveShareBtn = document.getElementById('liveShareBtn');
+        const languageSelect = document.getElementById('languageSelect');
+        const speechLanguageSelect = document.getElementById('speechLanguageSelect');
+        languageSelect.addEventListener('change', updateUserNameDisplays);
+        outputLanguage2.addEventListener('change', updateUserNameDisplays);
+
+updateUserNameDisplays();
+        const speechSpeed = document.getElementById('speechSpeed');
+const speechSpeedValue = document.getElementById('speechSpeedValue');
+
+speechSpeed.addEventListener('input', () => {
+    speechSpeedValue.textContent =
+        `${Number(speechSpeed.value).toFixed(1)}×`;
+});
+
+
+        const tabHold = document.getElementById('tabHold');
+        const tabToggle = document.getElementById('tabToggle');
+        const tabIndicator = document.getElementById('tabIndicator');
+        const pttInstruction = document.getElementById('pttInstruction');
+        const interimBadge = document.getElementById('interimBadge');
+        const interimText = document.getElementById('interimText');
+        const headerSaveBtn = document.getElementById('headerSaveBtn');
+        const openHistoryBtn = document.getElementById('openHistoryBtn');
+        const savedNotesBadgeCount = document.getElementById('savedNotesBadgeCount');
+        const historyModal = document.getElementById('historyModal');
+        const closeHistoryModal = document.getElementById('closeHistoryModal');
+        const historyListContainer = document.getElementById('historyListContainer');
+        const historyCount = document.getElementById('historyCount');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const toast = document.getElementById('toast');
+        const toastText = document.getElementById('toastText');
+        const formatModeGroup = document.getElementById('formatModeGroup');
+
+        let isListening = false;
+        let isToggleMode = false;
+        let currentFormattingMode = 'paragraph';
+        let recognition = null;
+        let finalTranscriptAccumulator = '';
+        
+        let micPermissionGranted = false;
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        });
+
+        function showToast(message) {
+            toastText.textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Pre-warm microphone permission once to avoid repeated browser dialog prompts
+        async function ensureMicPermission() {
+            if (micPermissionGranted) return true;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Stop tracks immediately after securing permission
+                stream.getTracks().forEach(track => track.stop());
+                micPermissionGranted = true;
+                return true;
+            } catch (err) {
+                console.warn("Microphone permission denied or unavailable:", err);
+                showToast("Please allow microphone access in your browser settings.");
+                return false;
+            }
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            showToast("Web Speech API not supported in this browser. Try Chrome.");
+            statusText.textContent = "Speech API Not Supported";
+            statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+            pttButton.disabled = true;
+        } else {
+            recognition = new SpeechRecognition();
+            
+
+recognition.lang = speechLanguageSelect.value;
+recognition.maxAlternatives = 3;
+
+// Update speech recognition when "Speak in" changes
+speechLanguageSelect.addEventListener('change', () => {
+    if (!recognition) return;
+
+    recognition.lang = speechLanguageSelect.value;
+
+    if (isListening) {
+        try {
+            recognition.stop();
+            showToast("Language changed. Start speaking again.");
+        } catch (error) {
+            console.error("Could not change speech language:", error);
+        }
+    } else {
+        showToast(
+            "Speak in: " +
+            speechLanguageSelect.options[
+                speechLanguageSelect.selectedIndex
+            ].text
+        );
+    }
+});
+
+
+
+recognition.onstart = () => {
+    isListening = true;
+    updateUIState(true);
+};
+        
+            recognition.onresult = async (event) => {
+                let interim = '';
+                let newFinal = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        newFinal += event.results[i][0].transcript.trim() + ' ';
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+
+        if (newFinal.trim()) {
+    const spokenText = formatSpokenText(
+        newFinal.trim(),
+        currentFormattingMode
+    );
+
+    // Replace the previous text in both workspaces.
+paragraphOutput.value = spokenText;
+input2Text.value = spokenText;
+
+finalTranscriptAccumulator = spokenText;
+updateCounts();
+interimBadge.classList.add('hidden');
+    const langName =
+        languageSelect.options[languageSelect.selectedIndex].text;
+
+    await translateContentToLanguage(
+    languageSelect.value,
+    langName
+);
+
+await translateSecondOutput(
+    spokenText,
+    speechLanguageSelect.value
+);
+}
+
+                if (interim) {
+                    interimText.textContent = interim;
+                    interimBadge.classList.remove('hidden');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error", event.error);
+                if (event.error !== 'no-speech') {
+                    showToast("Speech recognition error occurred");
+                }
+                stopListening();
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                updateUIState(false);
+                interimBadge.classList.add('hidden');
+            };
+        
+}
+    
+
+        
+
+
+let previousFirstOutputLanguage = languageSelect.value;
+let firstOutputLanguageChangeRequestId = 0;
+
+languageSelect.addEventListener('change', async () => {
+    const requestId = ++firstOutputLanguageChangeRequestId;
+
+    const editedText = transcriptEditor.value.trim();
+    const sourceLanguage = previousFirstOutputLanguage;
+    const targetLanguage = languageSelect.value;
+
+    previousFirstOutputLanguage = targetLanguage;
+
+    if (!editedText) {
+        showToast("First output is empty. Enter text before changing its language.");
+        return;
+    }
+
+    const langName =
+        languageSelect.options[languageSelect.selectedIndex].text;
+
+    await translateContentToLanguage(
+        targetLanguage,
+        langName,
+        editedText,
+        sourceLanguage,
+        () =>
+            requestId === firstOutputLanguageChangeRequestId &&
+            transcriptEditor.value.trim() === editedText
+    );
+});
+
+
+
+
+async function translateContentToLanguage(
+    langCode,
+    langName,
+    sourceTextOverride = null,
+    sourceLanguageOverride = null,
+    isRequestCurrent = () => true
+) {
+    const sourceText = (
+        sourceTextOverride ?? paragraphOutput.value
+    ).trim();
+
+    if (!sourceText) {
+        showToast("Speak or enter text in INPUT VOICE first.");
+        return;
+    }
+
+    const sourceLang = (
+        sourceLanguageOverride ?? speechLanguageSelect.value
+    ).split("-")[0];
+
+    const targetLang = langCode.split("-")[0];
+
+    if (sourceLang === targetLang) {
+        transcriptEditor.value = sourceText;
+        updateCounts();
+        showToast("Source and output languages are the same.");
+        return;
+    }
+
+    showToast(`Translating to ${langName}...`);
+
+    try {
+        const url =
+            "https://translate.googleapis.com/translate_a/single" +
+            "?client=gtx&sl=" +
+            encodeURIComponent(sourceLang) +
+            "&tl=" +
+            encodeURIComponent(targetLang) +
+            "&dt=t&q=" +
+            encodeURIComponent(sourceText);
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const translated = Array.isArray(data?.[0])
+            ? data[0]
+                .map(part => Array.isArray(part) ? part[0] || "" : "")
+                .join("")
+                .trim()
+            : "";
+
+        console.log("Google translation response:", {
+            status: response.status,
+            sourceLang,
+            targetLang,
+            translatedText: translated
+        });
+
+        if (response.ok && translated) {
+    if (!isRequestCurrent()) {
+        return;
+    }
+
+    transcriptEditor.value = translated;
+    updateCounts();
+    showToast(`Translated to ${langName}!`);
+    return;
+}
+
+        console.error("Translation unavailable:", data);
+        showToast("Translation unavailable. Please try again.");
+    } catch (error) {
+        console.error("Translation API error:", error);
+        showToast("Translation failed. Check your internet connection.");
+    }
+}
+
+
+
+async function translateSecondOutput(
+    sourceTextOverride = null,
+    sourceLanguageOverride = null
+) {
+    const text = (
+        sourceTextOverride ?? input2Text.value
+    ).trim();
+
+    if (!text) {
+        output2Text.value = "";
+        return;
+    }
+
+    const sourceLang = (
+        sourceLanguageOverride ?? speechLanguage2.value
+    ).split("-")[0];
+
+    const targetLang = outputLanguage2.value.split("-")[0];
+
+    if (sourceLang === targetLang) {
+        output2Text.value = text;
+        return;
+    }
+
+    try {
+        const url =
+            "https://translate.googleapis.com/translate_a/single" +
+            "?client=gtx&sl=" +
+            encodeURIComponent(sourceLang) +
+            "&tl=" +
+            encodeURIComponent(targetLang) +
+            "&dt=t&q=" +
+            encodeURIComponent(text);
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const translated = Array.isArray(data?.[0])
+            ? data[0]
+                .map(part => Array.isArray(part) ? part[0] || "" : "")
+                .join("")
+                .trim()
+            : "";
+
+        console.log("Google second translation response:", {
+            status: response.status,
+            sourceLang,
+            targetLang,
+            translatedText: translated
+        });
+
+        if (response.ok && translated) {
+            output2Text.value = translated;
+        } else {
+            console.error("Second translation unavailable:", data);
+            showToast("Second output translation unavailable.");
+        }
+    } catch (error) {
+        console.error("Second translation error:", error);
+        showToast(
+            "Second output translation failed. Check your internet connection."
+        );
+    }
+}
+
+
+        function formatSpokenText(text, mode) {
+            const lang = speechLanguageSelect.value;
+            if (lang.startsWith('hi') || lang.startsWith('bn') || lang.startsWith('mr')) {
+                if (!/[.?!|।]$/.test(text)) {
+                    text += '。';
+                }
+            } else if (lang.startsWith('ta') || lang.startsWith('te') || lang.startsWith('kn') || lang.startsWith('ml')) {
+                if (!/[.?!]$/.test(text)) {
+                    text += '.';
+                }
+            } else if (lang.startsWith('zh') || lang.startsWith('ja')) {
+                if (!/[。！？]$/.test(text)) {
+                    text += '。';
+                }
+            } else {
+                text = text.charAt(0).toUpperCase() + text.slice(1);
+                if (!/[.?!]$/.test(text)) {
+                    text += '.';
+                }
+            }
+
+            if (mode === 'bullets') {
+                return `• ${text}`;
+            } else {
+                return text;
+            }
+        }
+
+        function updateUIState(active) {
+            if (active) {
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-ping";
+                statusText.textContent = "Listening...";
+                statusIndicator.className = "inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800";
+                pttButton.classList.add('ring-4', 'ring-emerald-500/40', 'scale-105');
+                pttPulseRing.classList.remove('hidden');
+                pttButtonLabel.textContent = "LISTENING";
+                
+            } else {
+                statusDot.className = "w-2 h-2 rounded-full bg-slate-400";
+                statusText.textContent = "Microphone ready";
+                statusIndicator.className = "inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium";
+                pttButton.classList.remove('ring-4', 'ring-emerald-500/40', 'scale-105');
+                pttPulseRing.classList.add('hidden');
+                pttButtonLabel.textContent = isToggleMode ? "CLICK TO START" : "HOLD TO TALK";
+                
+            }
+        }
+
+        function startVisualizerAnimation() {
+            const bars = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4'), document.getElementById('bar5'), document.getElementById('bar6')];
+            visualizerInterval = setInterval(() => {
+                bars.forEach(bar => {
+                    const randomHeight = Math.floor(Math.random() * 24) + 4;
+                    bar.style.height = `${randomHeight}px`;
+                });
+            }, 120);
+        }
+
+        function stopVisualizerAnimation() {
+            if (visualizerInterval) clearInterval(visualizerInterval);
+            const bars = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4'), document.getElementById('bar5'), document.getElementById('bar6')];
+            bars.forEach((bar, idx) => {
+                bar.style.height = `${[8, 16, 20, 12, 16, 8][idx]}px`;
+            });
+        }
+
+        async function startListening() {
+            if (!recognition || isListening) return;
+            
+            const allowed = await ensureMicPermission();
+            if (!allowed) return;
+
+            try {
+                finalTranscriptAccumulator = paragraphOutput.value
+    ? paragraphOutput.value.trim() + ' '
+    : '';
+                recognition.start();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function stopListening() {
+            if (!recognition || !isListening) return;
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function setPttMode(toggleMode) {
+            isToggleMode = toggleMode;
+            if (isToggleMode) {
+                tabIndicator.style.transform = 'translateX(100%)';
+                tabToggle.classList.remove('text-slate-500', 'dark:text-slate-400');
+                tabToggle.classList.add('text-brand-600', 'dark:text-brand-400');
+                tabHold.classList.remove('text-brand-600', 'dark:text-brand-400');
+                tabHold.classList.add('text-slate-500', 'dark:text-slate-400');
+                
+                pttInstruction.textContent = "Click once to start recording, click again to stop";
+                pttButtonLabel.textContent = "CLICK TO START";
+                showToast("Switched to Click Toggle mode");
+            } else {
+                tabIndicator.style.transform = 'translateX(0%)';
+                tabHold.classList.remove('text-slate-500', 'dark:text-slate-400');
+                tabHold.classList.add('text-brand-600', 'dark:text-brand-400');
+                tabToggle.classList.remove('text-brand-600', 'dark:text-brand-400');
+                tabToggle.classList.add('text-slate-500', 'dark:text-slate-400');
+                
+                pttInstruction.textContent = "Press & hold spacebar or click button to speak";
+                pttButtonLabel.textContent = "HOLD TO TALK";
+                showToast("Switched to Hold-to-Talk mode");
+            }
+        }
+
+        tabHold.addEventListener('click', () => setPttMode(false));
+        tabToggle.addEventListener('click', () => setPttMode(true));
+
+        pttButton.addEventListener('mousedown', () => {
+            if (!isToggleMode) startListening();
+        });
+        window.addEventListener('mouseup', () => {
+            if (!isToggleMode && isListening) stopListening();
+        });
+
+        pttButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isToggleMode) startListening();
+        });
+        window.addEventListener('touchend', () => {
+            if (!isToggleMode && isListening) stopListening();
+        });
+
+        pttButton.addEventListener('click', () => {
+            if (isToggleMode) {
+                if (isListening) {
+                    stopListening();
+                } else {
+                    startListening();
+                }
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && document.activeElement !== transcriptEditor && !isToggleMode && !isListening) {
+                e.preventDefault();
+                startListening();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && document.activeElement !== transcriptEditor && !isToggleMode && isListening) {
+                e.preventDefault();
+                stopListening();
+            }
+        });
+
+        const modeButtons = formatModeGroup.querySelectorAll('.mode-btn');
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modeButtons.forEach(b => {
+                    b.classList.remove('border-brand-600', 'bg-brand-50/50', 'dark:bg-brand-950/30', 'text-brand-700', 'dark:text-brand-300');
+                    b.classList.add('border-slate-200', 'dark:border-slate-700', 'bg-transparent', 'text-slate-700', 'dark:text-slate-300');
+                });
+                btn.classList.add('border-brand-600', 'bg-brand-50/50', 'dark:bg-brand-950/30', 'text-brand-700', 'dark:text-brand-300');
+                btn.classList.remove('border-slate-200', 'dark:border-slate-700', 'bg-transparent', 'text-slate-700', 'dark:text-slate-300');
+                
+                currentFormattingMode = btn.getAttribute('data-mode');
+                showToast("Mode changed to " + btn.querySelector('span').textContent);
+            });
+        });
+
+        function updateCounts() {
+    const text = transcriptEditor.value.trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    const chars = text.length;
+    wordCountEl.textContent = `${words} word${words === 1 ? '' : 's'}`;
+    charCountEl.textContent = `${chars} char${chars === 1 ? '' : 's'}`;
+}
+
+transcriptEditor.addEventListener('input', () => {
+    updateCounts();
+});
+
+// FIXED: Added automatic translation and language detection for manual typing in INPUT VOICE
+let manualTypeTranslateTimer = null;
+paragraphOutput.addEventListener('input', () => {
+    finalTranscriptAccumulator = paragraphOutput.value;
+    
+    clearTimeout(manualTypeTranslateTimer);
+    const typedText = paragraphOutput.value.trim();
+
+    if (!typedText) {
+        transcriptEditor.value = '';
+        output2Text.value = '';
+        updateCounts();
+        return;
+    }
+
+    manualTypeTranslateTimer = setTimeout(async () => {
+        const langName = languageSelect.options[languageSelect.selectedIndex].text;
+
+        // Auto-detect source language ('auto') and translate to Workspace 1
+        await translateContentToLanguage(
+            languageSelect.value,
+            langName,
+            typedText,
+            'auto'
+        );
+
+        // Sync and auto-detect source language ('auto') for Workspace 2
+        input2Text.value = typedText;
+        await translateSecondOutput(
+            typedText,
+            'auto'
+        );
+    }, 700);
+});
+
+function getAvailableVoices() {
+    return new Promise((resolve) => {
+        const synth = window.speechSynthesis;
+        let voices = synth.getVoices();
+
+        if (voices.length > 0) {
+            resolve(voices);
+            return;
+        }
+
+        const onVoicesChanged = () => {
+            voices = synth.getVoices();
+
+            if (voices.length > 0) {
+                synth.removeEventListener("voiceschanged", onVoicesChanged);
+                clearTimeout(timeoutId);
+                resolve(voices);
+            }
+        };
+
+        synth.addEventListener("voiceschanged", onVoicesChanged);
+
+        const timeoutId = setTimeout(() => {
+            synth.removeEventListener("voiceschanged", onVoicesChanged);
+            resolve(synth.getVoices());
+        }, 2000);
+    });
+}
+
+function setBestVoice(utterance, selectedLanguage) {
+    const voices = window.speechSynthesis.getVoices();
+    const requested = (selectedLanguage || "en-US").toLowerCase();
+    const languageCode = requested.split("-")[0];
+
+    const voice =
+        voices.find(v =>
+            v.lang.toLowerCase() === requested &&
+            /natural|neural|google|microsoft/i.test(v.name)
+        ) ||
+        voices.find(v =>
+            v.lang.toLowerCase() === requested
+        ) ||
+        voices.find(v =>
+            v.lang.toLowerCase().split("-")[0] === languageCode &&
+            /natural|neural|google|microsoft/i.test(v.name)
+        ) ||
+        voices.find(v =>
+            v.lang.toLowerCase().split("-")[0] === languageCode
+        );
+
+    utterance.lang = selectedLanguage || "en-US";
+
+    if (!voice) {
+        return false;
+    }
+
+    utterance.voice = voice;
+    return true;
+}
+
+        tellBtn.addEventListener('click', () => {
+    const text = transcriptEditor.value.trim();
+
+    if (!text) {
+        showToast("Nothing to tell! Editor is empty.");
+        return;
+    }
+
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+        showToast("Text-to-speech not supported in this browser.");
+        return;
+    }
+
+    const synth = window.speechSynthesis;
+
+    if (synth.speaking || synth.pending) {
+        synth.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    setBestVoice(utterance, languageSelect.value);
+
+    try {
+        synth.resume();
+    } catch (e) {
+        console.warn("Speech synthesis resume warning:", e);
+    }
+
+    utterance.onstart = () => {
+        showToast("Telling contents out loud...");
+        tellBtn.classList.add('animate-pulse', 'bg-indigo-200');
+    };
+
+    utterance.onend = () => {
+        tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
+    };
+
+    utterance.onerror = (event) => {
+        tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
+        if (event.error === 'canceled' || event.error === 'interrupted') {
+            return;
+        }
+        showToast("Error reading text.");
+    };
+
+    synth.speak(utterance);
+});
+
+        liveShareBtn.addEventListener('click', () => {
+            const text = transcriptEditor.value.trim();
+            if (!text) {
+                showToast("Nothing to share! Editor is empty.");
+                return;
+            }
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'VoiceToPara Active Paragraph',
+                    text: text
+                }).then(() => {
+                    showToast("Paragraph shared successfully!");
+                }).catch((err) => {
+                    if (err.name !== 'AbortError') {
+                        copyActiveText();
+                    }
+                });
+            } else {
+                copyActiveText();
+                showToast("Web share not supported. Paragraph copied to clipboard!");
+            }
+        });
+
+        function copyActiveText() {
+            const text = transcriptEditor.value;
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error(err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        copyBtn.addEventListener('click', () => {
+            const text = transcriptEditor.value;
+            if (!text) {
+                showToast("Nothing to copy!");
+                return;
+            }
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Copied to clipboard!");
+            } catch (err) {
+                showToast("Failed to copy text.");
+            }
+            document.body.removeChild(textarea);
+        });
+
+        clearBtn.addEventListener('click', () => {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        transcriptEditor.value = '';
+paragraphOutput.value = '';
+finalTranscriptAccumulator = '';
+updateCounts();
+showToast("Editor cleared.");
+        });
+
+        function getSavedHistory() {
+            try {
+                return JSON.parse(localStorage.getItem('voice_to_para_notes')) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function updateSavedNotesBadge() {
+            const history = getSavedHistory();
+            savedNotesBadgeCount.textContent = history.length;
+        }
+
+        function saveCurrentNote() {
+            const text = transcriptEditor.value.trim();
+            if (!text) {
+                showToast("Editor is empty! Nothing to save.");
+                return;
+            }
+            const history = getSavedHistory();
+            const newNote = {
+    id: Date.now(),
+    date: new Date().toLocaleString(),
+    mode: currentFormattingMode,
+    language: languageSelect.options[languageSelect.selectedIndex].text,
+    fullText: text,
+    cloudOwnerUid: window.currentVoiceToParaUserUid || null,
+    cloudSynced: false
+};
+            history.unshift(newNote);
+
+localStorage.setItem('voice_to_para_notes', JSON.stringify(history));
+
+if (window.syncNoteToCloud) {
+    window.syncNoteToCloud(newNote);
+}
+
+updateSavedNotesBadge();
+showToast("Note saved successfully!");
+            
+            renderHistoryList();
+            historyModal.classList.remove('hidden');
+        }
+
+        if (headerSaveBtn) headerSaveBtn.addEventListener('click', saveCurrentNote);
+
+        openHistoryBtn.addEventListener('click', () => {
+            renderHistoryList();
+            historyModal.classList.remove('hidden');
+        });
+
+        closeHistoryModal.addEventListener('click', () => {
+            historyModal.classList.add('hidden');
+        });
+
+        function renderHistoryList() {
+            const history = getSavedHistory();
+            historyCount.textContent = `${history.length} saved note${history.length === 1 ? '' : 's'}`;
+            savedNotesBadgeCount.textContent = history.length;
+
+            if (history.length === 0) {
+                historyListContainer.innerHTML = `<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-bookmark text-3xl mb-2 opacity-50"></i><p class="text-sm">No saved notes yet. Click "Save Note" to store dictations here.</p></div>`;
+                return;
+            }
+            
+            historyListContainer.innerHTML = history.map(item => `
+                <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50/50 dark:bg-slate-800/50 hover:border-brand-500/50 transition flex flex-col space-y-3">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span><i class="fa-regular fa-calendar mr-1"></i>${item.date}</span>
+                        <div class="space-x-1">
+                            <span class="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px]">${item.language || 'English'}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-medium uppercase text-[10px]">${item.mode}</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-700 dark:text-slate-200 leading-relaxed bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-100 dark:border-slate-800">${item.fullText}</p>
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="loadHistoryItem(${item.id})" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-1">
+                                <i class="fa-solid fa-folder-open"></i>
+                                <span>Load</span>
+                            </button>
+                            <button onclick="deleteHistoryItem(${item.id})" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold transition flex items-center space-x-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-[11px] text-slate-400 mr-1"><i class="fa-solid fa-share-nodes"></i> Share:</span>
+                            <button onclick="shareViaWebAPI(${item.id})" class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 flex items-center justify-center text-xs transition" title="Share via device options">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </button>
+                            <button onclick="shareViaWhatsApp(${item.id})" class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 flex items-center justify-center text-xs transition" title="Share on WhatsApp">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </button>
+                            <button onclick="shareViaEmail(${item.id})" class="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 hover:bg-sky-100 flex items-center justify-center text-xs transition" title="Share via Email">
+                                <i class="fa-regular fa-envelope"></i>
+                            </button>
+                            <button onclick="copyNoteText(${item.id})" class="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 flex items-center justify-center text-xs transition" title="Copy text">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+                
+        window.loadHistoryItem = function(id) {
+    const history = getSavedHistory();
+    const item = history.find(h => h.id === id);
+
+    if (item) {
+        transcriptEditor.value = item.fullText;
+        updateCounts();
+        historyModal.classList.add('hidden');
+        showToast("Note loaded into editor!");
+    }
+};
+
+        window.deleteHistoryItem = function(id) {
+            let history = getSavedHistory();
+            history = history.filter(h => h.id !== id);
+            localStorage.setItem('voice_to_para_notes', JSON.stringify(history));
+            renderHistoryList();
+            showToast("Note deleted.");
+        };
+
+        window.shareViaWebAPI = function(id) {
+            const history = getSavedHistory();
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'VoiceToPara Note - ' + item.date,
+                    text: item.fullText
+                }).then(() => {
+                    showToast("Shared successfully!");
+                }).catch((err) => {
+                    if (err.name !== 'AbortError') copyNoteText(id);
+                });
+            } else {
+                copyNoteText(id);
+                showToast("Web share not supported. Text copied to clipboard!");
+            }
+        };
+
+        window.shareViaWhatsApp = function(id) {
+            const history = getSavedHistory();
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(item.fullText)}`;
+            window.open(url, '_blank');
+        };
+
+        window.shareViaEmail = function(id) {
+            const history = getSavedHistory();
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+            const subject = encodeURIComponent("VoiceToPara Note (" + item.date + ")");
+            const body = encodeURIComponent(item.fullText);
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        };
+
+        window.copyNoteText = function(id) {
+            const history = getSavedHistory();
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = item.fullText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Note text copied to clipboard!");
+            } catch (err) {
+                showToast("Failed to copy note.");
+            }
+            document.body.removeChild(textarea);
+        };
+
+        clearHistoryBtn.addEventListener('click', () => {
+            if (confirm("Are you sure you want to clear all saved notes?")) {
+                localStorage.removeItem('voice_to_para_notes');
+                renderHistoryList();
+                showToast("All saved notes cleared.");
+            }
+        });
+
+        updateCounts();
+        updateSavedNotesBadge();
+    </script>
+<script type="module">
+  import { auth, db, onAuthStateChanged } from "./firebase-config.js";
+
+  import {
+    collection,
+    doc,
+    setDoc,
+    getDocs
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  let currentUser = null;
+  window.currentVoiceToParaUserUid = null;
+
+  let voiceToParaLandscapeLocked = false;
+  let landscapeRetryInProgress = false;
+
+  async function enableVoiceToParaLandscape() {
+      if (landscapeRetryInProgress || voiceToParaLandscapeLocked) {
+          return;
+      }
+
+      if (!screen.orientation || !screen.orientation.lock) {
+          return;
+      }
+
+      landscapeRetryInProgress = true;
+
+      try {
+          if (!document.fullscreenElement &&
+              document.documentElement.requestFullscreen) {
+              try {
+                  await document.documentElement.requestFullscreen();
+              } catch (fullscreenError) {
+                  // Ignore
+              }
+          }
+
+          await screen.orientation.lock("landscape");
+          voiceToParaLandscapeLocked = true;
+      } catch (error) {
+          // Ignore
+      } finally {
+          landscapeRetryInProgress = false;
+      }
+  }
+
+  document.addEventListener("pointerdown", async function retryLandscapeOnTap() {
+      if (!currentUser || voiceToParaLandscapeLocked) {
+          return;
+      }
+      await enableVoiceToParaLandscape();
+  });
+
+  window.addEventListener("pagehide", () => {
+      try {
+          if (screen.orientation && screen.orientation.unlock) {
+              screen.orientation.unlock();
+          }
+      } catch (error) {
+          // Ignore
+      }
+      voiceToParaLandscapeLocked = false;
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    window.currentVoiceToParaUserUid = user ? user.uid : null;
+
+    if (user) {
+        enableVoiceToParaLandscape();
+        await downloadCloudNotes();
+        await syncPendingNotes();
+    } else {
+        try {
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
+
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+        } catch (error) {
+            // Ignore
+        }
+        voiceToParaLandscapeLocked = false;
+    }
+  });
+
+  async function uploadNoteToFirebase(note) {
+    if (!currentUser || !navigator.onLine) {
+      return;
+    }
+
+    try {
+      const noteRef = doc(
+        collection(db, "users", currentUser.uid, "notes"),
+        String(note.id)
+      );
+
+      await Promise.race([
+        setDoc(noteRef, {
+          fullText: note.fullText,
+          date: note.date,
+          mode: note.mode,
+          language: note.language,
+          createdAtMs: note.id
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout")), 10000)
+        )
+      ]);
+
+      markNoteAsSynced(note.id);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  function markNoteAsSynced(noteId) {
+    try {
+      const notes = JSON.parse(localStorage.getItem("voice_to_para_notes")) || [];
+      const updatedNotes = notes.map(note => {
+        if (note.id === noteId) {
+          return {
+            ...note,
+            cloudSynced: true,
+            cloudOwnerUid: currentUser.uid
+          };
+        }
+        return note;
+      });
+
+      localStorage.setItem("voice_to_para_notes", JSON.stringify(updatedNotes));
+    } catch (error) {
+      // Ignore
+    }
+  }
+
+  async function syncPendingNotes() {
+    if (!currentUser || !navigator.onLine) {
+      return;
+    }
+
+    try {
+      const notes = JSON.parse(localStorage.getItem("voice_to_para_notes")) || [];
+      for (const note of notes) {
+        if (
+          note.cloudOwnerUid === currentUser.uid &&
+          note.cloudSynced !== true
+        ) {
+          await uploadNoteToFirebase(note);
+        }
+      }
+    } catch (error) {
+      // Ignore
+    }
+  }
+
+  async function downloadCloudNotes() {
+    if (!currentUser || !navigator.onLine) {
+        return;
+    }
+
+    try {
+        const notesRef = collection(db, "users", currentUser.uid, "notes");
+        const snapshot = await getDocs(notesRef);
+        const cloudNotes = [];
+
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            cloudNotes.push({
+                id: Number(data.createdAtMs || docSnap.id),
+                date: data.date || "",
+                mode: data.mode || "paragraph",
+                language: data.language || "English (United States)",
+                fullText: data.fullText || "",
+                cloudSynced: true,
+                cloudOwnerUid: currentUser.uid
+            });
+        });
+
+        const localNotes = JSON.parse(localStorage.getItem("voice_to_para_notes")) || [];
+        const notesById = new Map();
+
+        for (const note of localNotes) {
+            notesById.set(String(note.id), note);
+        }
+
+        for (const cloudNote of cloudNotes) {
+            const key = String(cloudNote.id);
+            if (!notesById.has(key)) {
+                notesById.set(key, cloudNote);
+            } else {
+                const localNote = notesById.get(key);
+                notesById.set(key, {
+                    ...localNote,
+                    cloudSynced: true,
+                    cloudOwnerUid: currentUser.uid
+                });
+            }
+        }
+
+        const mergedNotes = Array.from(notesById.values())
+            .sort((a, b) => Number(b.id) - Number(a.id));
+
+        localStorage.setItem("voice_to_para_notes", JSON.stringify(mergedNotes));
+        updateSavedNotesBadge();
+        renderHistoryList();
+    } catch (error) {
+        // Ignore
+    }
+  }
+
+  window.syncNoteToCloud = function(note) {
+    return uploadNoteToFirebase(note);
+  };
+
+  window.addEventListener("online", async () => {
+      await syncPendingNotes();
+      await downloadCloudNotes();
+  });
+
+/* =========================================================
+   SECOND WORKSPACE — INDEPENDENT PTT, INPUT, OUTPUT & STYLE
+   ========================================================= */
+
+(() => {
+    const ptt2Button = document.getElementById('ptt2Button');
+    const ptt2Hold = document.getElementById('ptt2Hold');
+    const ptt2Toggle = document.getElementById('ptt2Toggle');
+    const ptt2Status = document.getElementById('ptt2Status');
+    const ptt2Label = document.getElementById('ptt2Label');
+    const ptt2Instruction = document.getElementById('ptt2Instruction');
+    const speechLanguage2 = document.getElementById('speechLanguage2');
+    const input2Text = document.getElementById('input2Text');
+    const output2Text = document.getElementById('output2Text');
+    
+    let firstToSecondTranslateTimer = null;
+
+    transcriptEditor.addEventListener('input', () => {
+        clearTimeout(firstToSecondTranslateTimer);
+        secondOutputTranslationRequestId++;
+
+        const typedText = transcriptEditor.value.trim();
+
+        if (!typedText) {
+            output2Text.value = '';
+            return;
+        }
+
+        firstToSecondTranslateTimer = setTimeout(async () => {
+            await translateSecondOutput(typedText, 'auto');
+        }, 700);
+    });
+
+    let outputToFirstTranslateTimer = null;
+    let outputToFirstTranslateRequest = 0;
+
+    output2Text.addEventListener('input', () => {
+        clearTimeout(outputToFirstTranslateTimer);
+        secondOutputTranslationRequestId++;
+
+        const requestId = ++outputToFirstTranslateRequest;
+        const typedText = output2Text.value.trim();
+
+        if (!typedText) {
+            transcriptEditor.value = '';
+            updateCounts();
+            return;
+        }
+
+        outputToFirstTranslateTimer = setTimeout(async () => {
+            if (
+                requestId !== outputToFirstTranslateRequest ||
+                output2Text.value.trim() !== typedText
+            ) {
+                return;
+            }
+
+            const targetLanguage = languageSelect.options[languageSelect.selectedIndex].text;
+
+            await translateContentToLanguage(
+                languageSelect.value,
+                targetLanguage,
+                typedText,
+                'auto',
+                () =>
+                    requestId === outputToFirstTranslateRequest &&
+                    output2Text.value.trim() === typedText
+            );
+
+            if (requestId === outputToFirstTranslateRequest) {
+                updateCounts();
+            }
+        }, 700);
+    });
+
+    const clearOutput2Btn = document.getElementById('clearOutput2Btn');
+
+    clearOutput2Btn.addEventListener('click', () => {
+        output2Text.value = '';
+        output2Text.dispatchEvent(new Event('input', { bubbles: true }));
+        output2Text.focus();
+        showToast('Second output cleared!');
+    });
+
+    const outputLanguage2 = document.getElementById('outputLanguage2');
+    const translate2Btn = document.getElementById('translate2Btn');
+    const formatModeGroup2 = document.getElementById('formatModeGroup2');
+
+    const SpeechRecognition2 = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    let recognition2 = null;
+    let listening2 = false;
+    let toggleMode2 = false;
+    let formatMode2 = 'paragraph';
+    let finalText2 = '';
+
+    function updateStatus2() {
+        ptt2Status.textContent = listening2
+            ? 'Listening...'
+            : 'Microphone ready';
+
+        ptt2Label.textContent = listening2
+            ? 'LISTENING'
+            : (toggleMode2 ? 'CLICK TO START' : 'HOLD TO TALK');
+
+        ptt2Button.classList.toggle('ring-4', listening2);
+        ptt2Button.classList.toggle('ring-emerald-400', listening2);
+    }
+
+    function formatText2(text) {
+        text = text.trim();
+        if (!text) return '';
+
+        if (['hi', 'bn', 'mr'].some(code => speechLanguage2.value.startsWith(code))) {
+            if (!/[.?!|।]\$/.test(text)) text += '।';
+        } else if (['zh', 'ja'].some(code => speechLanguage2.value.startsWith(code))) {
+            if (!/[。！？]\$/.test(text)) text += '。';
+        } else {
+            text = text.charAt(0).toUpperCase() + text.slice(1);
+            if (!/[.?!]\$/.test(text)) text += '.';
+        }
+
+        return formatMode2 === 'bullets' ? `• ${text}` : text;
+    }
+
+    async function startListening2() {
+        if (!recognition2 || listening2) return;
+
+        const allowed = await ensureMicPermission();
+        if (!allowed || listening2) return;
+
+        try {
+            finalText2 = input2Text.value.trim();
+            recognition2.lang = speechLanguage2.value;
+            recognition2.start();
+        } catch (error) {
+            ptt2Status.textContent = 'Could not start microphone';
+        }
+    }
+
+    function setMode2(useToggleMode) {
+        toggleMode2 = useToggleMode;
+
+        if (!toggleMode2 && listening2) {
+            stopListening2();
+        }
+
+        ptt2Hold.classList.toggle('bg-emerald-600', !toggleMode2);
+        ptt2Hold.classList.toggle('text-white', !toggleMode2);
+        ptt2Hold.classList.toggle('bg-slate-200', toggleMode2);
+
+        ptt2Toggle.classList.toggle('bg-emerald-600', toggleMode2);
+        ptt2Toggle.classList.toggle('text-white', toggleMode2);
+        ptt2Toggle.classList.toggle('bg-slate-200', !toggleMode2);
+
+        updateStatus2();
+    }
+
+    function stopListening2() {
+        if (!recognition2 || !listening2) return;
+        try {
+            recognition2.stop();
+        } catch (error) {
+            // Ignore
+        }
+    }
+
+    ptt2Hold.addEventListener('click', () => setMode2(false));
+    ptt2Toggle.addEventListener('click', () => setMode2(true));
+
+    ptt2Button.addEventListener('mousedown', () => {
+        if (!toggleMode2) startListening2();
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!toggleMode2 && listening2) stopListening2();
+    });
+
+    ptt2Button.addEventListener('touchstart', event => {
+        event.preventDefault();
+        if (!toggleMode2) startListening2();
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+        if (!toggleMode2 && listening2) stopListening2();
+    });
+
+    ptt2Button.addEventListener('click', () => {
+        if (!toggleMode2) return;
+        if (listening2) stopListening2();
+        else startListening2();
+    });
+
+    const modeButtons2 = formatModeGroup2.querySelectorAll('.mode2-btn');
+
+    modeButtons2.forEach(button => {
+        button.addEventListener('click', () => {
+            modeButtons2.forEach(item => {
+                item.classList.remove(
+                    'border-emerald-600',
+                    'bg-emerald-50',
+                    'dark:bg-emerald-950/30'
+                );
+                item.classList.add(
+                    'border-slate-200',
+                    'dark:border-slate-700'
+                );
+            });
+
+            button.classList.add(
+                'border-emerald-600',
+                'bg-emerald-50',
+                'dark:bg-emerald-950/30'
+            );
+            button.classList.remove(
+                'border-slate-200',
+                'dark:border-slate-700'
+            );
+
+            formatMode2 = button.dataset.mode;
+        });
+    });
+
+    if (SpeechRecognition2) {
+        recognition2 = new SpeechRecognition2();
+        recognition2.continuous = true;
+        recognition2.interimResults = false;
+        recognition2.maxAlternatives = 1;
+        recognition2.lang = speechLanguage2.value;
+
+        recognition2.onstart = () => {
+            listening2 = true;
+            updateStatus2();
+        };
+
+        recognition2.onresult = async event => {
+            let spoken = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    spoken += event.results[i][0].transcript.trim() + ' ';
+                }
+            }
+
+            spoken = spoken.trim();
+            if (!spoken) return;
+
+            const formatted = formatText2(spoken);
+
+            paragraphOutput.value = formatted;
+            input2Text.value = formatted;
+
+            finalTranscriptAccumulator = formatted;
+            finalText2 = formatted;
+            updateCounts();
+
+            const langName = languageSelect.options[languageSelect.selectedIndex].text;
+
+            await translateContentToLanguage(
+                languageSelect.value,
+                langName,
+                formatted,
+                speechLanguage2.value
+            );
+
+            await translateSecondOutput(
+                formatted,
+                speechLanguage2.value
+            );
+
+            output2Text.scrollTop = output2Text.scrollHeight;
+        };
+
+        recognition2.onerror = event => {
+            if (event.error !== 'no-speech') {
+                ptt2Status.textContent = 'Speech recognition error';
+            }
+        };
+
+        recognition2.onend = () => {
+            listening2 = false;
+            updateStatus2();
+        };
+
+        speechLanguage2.addEventListener('change', () => {
+            recognition2.lang = speechLanguage2.value;
+        });
+    } else {
+        ptt2Status.textContent = 'Speech recognition is not supported in this browser';
+        ptt2Button.disabled = true;
+    }
+
+    let secondOutputTranslationRequestId = 0;
+
+    async function translateSecondOutput(
+        sourceTextOverride = null,
+        sourceLanguageOverride = null
+    ) {
+        const requestId = ++secondOutputTranslationRequestId;
+        const text = (sourceTextOverride ?? input2Text.value).trim();
+        const sourceLang = (sourceLanguageOverride ?? speechLanguage2.value).split('-')[0];
+        const target = outputLanguage2.value.split('-')[0];
+
+        if (!text) {
+            if (requestId === secondOutputTranslationRequestId) {
+                ptt2Status.textContent = 'Speak or enter text first';
+            }
+            return false;
+        }
+
+        if (sourceLang === target) {
+            if (requestId !== secondOutputTranslationRequestId) {
+                return false;
+            }
+            output2Text.value = text;
+            ptt2Status.textContent = 'Source and target languages are the same';
+            showToast('Source and output languages are the same.');
+            return true;
+        }
+
+        translate2Btn.disabled = true;
+        translate2Btn.textContent = 'Translating...';
+
+        ptt2Status.textContent =
+            'Translating to ' +
+            outputLanguage2.options[outputLanguage2.selectedIndex].text + '...';
+
+        try {
+            const url =
+                'https://api.mymemory.translated.net/get?q=' +
+                encodeURIComponent(text) +
+                '&langpair=' +
+                encodeURIComponent(sourceLang) +
+                '%7C' +
+                encodeURIComponent(target);
+
+            const response = await fetch(url);
+            const data = await response.json();
+            const translated = data?.responseData?.translatedText?.trim();
+
+            if (requestId !== secondOutputTranslationRequestId) {
+                return false;
+            }
+
+            if (response.ok && data.responseStatus === 200 && translated) {
+                output2Text.value = translated;
+                ptt2Status.textContent = 'Second output translated';
+                return true;
+            }
+
+            ptt2Status.textContent = 'Translation unavailable; try again';
+            showToast('Translation unavailable. Please try again.');
+            return false;
+        } catch (error) {
+            if (requestId !== secondOutputTranslationRequestId) {
+                return false;
+            }
+            ptt2Status.textContent = 'Translation request failed';
+            showToast('Could not translate. Check your internet connection.');
+            return false;
+        } finally {
+            if (requestId === secondOutputTranslationRequestId) {
+                translate2Btn.disabled = false;
+                translate2Btn.textContent = 'Translate Second Output';
+            }
+        }
+    }
+
+    translate2Btn.addEventListener('click', () => {
+        translateSecondOutput();
+    });
+
+    let previousSecondOutputLanguage = outputLanguage2.value;
+
+    outputLanguage2.addEventListener('change', () => {
+        const editedText = output2Text.value.trim();
+        const sourceLanguage = previousSecondOutputLanguage;
+        const targetLanguage = outputLanguage2.value;
+
+        previousSecondOutputLanguage = targetLanguage;
+
+        if (!editedText) {
+            showToast("Second output is empty. Enter text before changing its language.");
+            return;
+        }
+
+        translateSecondOutput(editedText, sourceLanguage);
+    });
+
+    input2Text.addEventListener('input', () => {
+        finalText2 = input2Text.value;
+    });
+
+    output2Text.addEventListener('input', () => {
+        // Intentionally keep input2Text unchanged.
+    });
+
+    const tell2Btn = document.getElementById('tell2Btn');
+    let secondSpeechRequestId = 0;
+
+    tell2Btn.addEventListener('click', () => {
+        const text = output2Text.value.trim();
+
+        if (!text) {
+            showToast('Nothing to tell! Output is empty.');
+            return;
+        }
+
+        if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+            showToast('Text-to-speech is not supported in this browser.');
+            return;
+        }
+
+        const synth = window.speechSynthesis;
+        const requestId = ++secondSpeechRequestId;
+
+        synth.cancel();
+        tell2Btn.classList.remove('animate-pulse', 'bg-indigo-200');
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = outputLanguage2.value;
+        utterance.rate = Number(document.getElementById('output2Speed').value);
+
+        if (!setBestVoice(utterance, outputLanguage2.value)) {
+            showToast('No installed speech voice supports this language.');
+            return;
+        }
+
+        utterance.onstart = () => {
+            if (requestId !== secondSpeechRequestId) return;
+            tell2Btn.classList.add('animate-pulse', 'bg-indigo-200');
+            showToast('Reading second output aloud...');
+        };
+
+        utterance.onend = () => {
+            if (requestId !== secondSpeechRequestId) return;
+            tell2Btn.classList.remove('animate-pulse', 'bg-indigo-200');
+        };
+
+        utterance.onerror = (event) => {
+            if (requestId !== secondSpeechRequestId) return;
+            tell2Btn.classList.remove('animate-pulse', 'bg-indigo-200');
+            if (event.error === 'canceled' || event.error === 'interrupted') {
+                return;
+            }
+            showToast('Could not read the second output.');
+        };
+
+        setTimeout(() => {
+            if (requestId !== secondSpeechRequestId) return;
+            try {
+                synth.resume();
+                synth.speak(utterance);
+            } catch (error) {
+                showToast('Could not start second output speech.');
+            }
+        }, 150);
+    });
+
+    const copy2Btn = document.getElementById('copy2Btn');
+
+    copy2Btn.addEventListener('click', async () => {
+        const text = output2Text.value;
+
+        if (!text.trim()) {
+            showToast('Nothing to copy!');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('Second output copied!');
+        } catch (error) {
+            output2Text.focus();
+            output2Text.select();
+            const copied = document.execCommand('copy');
+            if (copied) {
+                showToast('Second output copied!');
+            } else {
+                showToast('Copy failed.');
+            }
+            output2Text.setSelectionRange(output2Text.value.length, output2Text.value.length);
+        }
+    });
+
+    const share2Btn = document.getElementById('share2Btn');
+
+    share2Btn.addEventListener('click', async () => {
+        const text = output2Text.value.trim();
+
+        if (!text) {
+            showToast('Nothing to share! Output is empty.');
+            return;
+        }
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'VoiceToPara Output',
+                    text: text
+                });
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showToast('Sharing failed.');
+                }
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('Sharing is unavailable here. Text copied instead.');
+            } catch (error) {
+                showToast('Sharing is unavailable.');
+            }
+        }
+    });
+})();
+</script>
+</body>
+</html>
