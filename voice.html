@@ -219,7 +219,16 @@ body {
         grid-area: out2 !important;
         min-width: 0 !important;
     }
+/* FIX: Remove extra top spacing from second workspace panels */
+#workspace2 > div {
+    margin-top: 0 !important;
+}
 
+/* Keep both PTT panels aligned at the top */
+main > div:nth-child(1),
+#workspace2 > div:nth-of-type(1) {
+    align-self: stretch !important;
+}
     /* Keep output headers within each column */
     main > div:nth-child(3) > div:first-child,
     #workspace2 > div:nth-of-type(3) > div:first-child {
@@ -234,10 +243,93 @@ body {
         max-width: 100% !important;
     }
 }
+/* LIVE SPEAKER POPUP — SHARED BY BOTH OUTPUT BOXES */
+.speaker-live-popup {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 50;
 
-    
+    display: flex;
+    align-items: center;
+    gap: 9px;
 
+    padding: 10px 15px;
+    border: 1px solid rgba(56, 189, 248, 0.8);
+    border-radius: 14px;
+
+    color: #ffffff;
+    background: linear-gradient(135deg, #0f172a, #075985);
+    box-shadow: 0 0 14px rgba(14, 165, 233, 0.45);
+
+    font-size: 13px;
+    font-weight: 700;
+    pointer-events: none;
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.96);
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s ease;
+}
+
+.speaker-live-popup.is-speaking {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    animation: speakerPopupGlow 1.5s ease-in-out infinite;
+}
+
+.speaker-live-mic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+
+    color: #ffffff;
+    background: #0284c7;
+    border-radius: 50%;
+
+    animation: speakerMicPulse 0.9s ease-in-out infinite;
+}
+
+.speaker-live-label {
+    white-space: nowrap;
+}
+
+@keyframes speakerPopupGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(14, 165, 233, 0.35);
+    }
+
+    50% {
+        box-shadow: 0 0 22px rgba(56, 189, 248, 0.85);
+    }
+}
+
+@keyframes speakerMicPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.12);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .speaker-live-popup.is-speaking,
+    .speaker-live-mic {
+        animation: none;
+    }
+}
     </style>
+
 </head>
 <body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 flex flex-col">
 
@@ -262,9 +354,6 @@ body {
             </button>
         </div>
     </header>
-
-
-   
 
     <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col space-y-6">
 
@@ -298,12 +387,19 @@ body {
                 </button>
                
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" id="pttInstruction">Press & hold spacebar or click button to speak</p>
-                <!-- Shared user name -->
+            <!-- Shared user display — ABOVE the user name input -->
+<p id="userNameDisplay1"
+    class="mt-2 text-sm font-semibold text-brand-600 dark:text-brand-400">
+    User: —
+</p>
+
+<!-- Shared user name -->
 <div class="mt-4 w-full max-w-xs">
     <label for="userNameInput"
         class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
         User name
     </label>
+
     <input
         id="userNameInput"
         type="text"
@@ -313,12 +409,23 @@ body {
     />
 </div>
 
-<p id="userNameDisplay1"
-    class="mt-2 text-sm font-semibold text-brand-600 dark:text-brand-400">
-    User: —
-</p>
+
+
+<!-- Tell button moved underneath the first user's name -->
+<div class="mt-3 flex justify-center">
+    <button
+        id="tellBtn"
+        type="button"
+        class="px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition flex items-center space-x-1.5"
+        title="Read Aloud / Tell Content">
+        <i class="fa-solid fa-volume-high"></i>
+        <span>Tell</span>
+    </button>
+</div>
+
+
 <!-- Language the user will speak -->
-<div class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl mb-4">
+<div class="hidden">
     <i class="fa-solid fa-microphone text-brand-600 text-xs"></i>
     <label for="speechLanguageSelect" class="text-xs font-semibold text-slate-600 dark:text-slate-300">
         Speak in:
@@ -451,10 +558,7 @@ body {
 
                 <!-- Right Group: Clean Organized Action Buttons -->
                 <div class="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0">
-                    <button id="tellBtn" class="px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition flex items-center space-x-1.5 shrink-0" title="Read Aloud / Tell Content">
-                        <i class="fa-solid fa-volume-high"></i>
-                        <span>Tell</span>
-                    </button>
+                    
                     <button id="liveShareBtn" class="px-3 py-1.5 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/50 text-xs font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-100 transition flex items-center space-x-1.5 shrink-0" title="Share Paragraph">
                         <i class="fa-solid fa-share-nodes"></i>
                         <span>Share</span>
@@ -501,11 +605,6 @@ body {
             </div>
         </div>
 
-        
-        
-
-        
-
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
             
             <!-- Format Style Selector -->
@@ -531,26 +630,45 @@ body {
             </div>
         </div>
 
-                        <!-- SECOND INDEPENDENT WORKSPACE -->
+        <!-- SECOND INDEPENDENT WORKSPACE -->
 <section id="workspace2" class="w-full min-w-0 flex flex-col space-y-6">
 
     <h2 class="text-lg font-bold text-emerald-600">SECOND WORKSPACE</h2>
 
     <!-- SECOND PTT BOX -->
-    <div class="bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-transparent border border-brand-500/20 rounded-2xl p-6 text-center flex flex-col items-center">
-                    <div class="flex gap-2 mb-4 w-full max-w-xs">
-            <button id="ptt2Hold" class="flex-1 p-2 rounded-lg bg-emerald-600 text-white text-sm font-bold">Hold to Talk</button>
-            <button id="ptt2Toggle" class="flex-1 p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-sm font-bold">Click Toggle</button>
-        </div>
+    <div class="bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-transparent border border-brand-500/20 rounded-2xl p-6 text-center flex flex-col items-center justify-center">
+                    <!-- SECOND PTT SWITCH — MATCH FIRST WORKSPACE DESIGN -->
+<div class="relative w-full max-w-[240px] flex bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl shadow-inner mb-4">
+
+    <div
+        id="ptt2TabIndicator"
+        class="absolute top-1 bottom-1 w-[calc(50%-4px)] left-1 bg-white dark:bg-slate-900 rounded-lg shadow-md transition-all duration-300 ease-in-out">
+    </div>
+
+    <button
+        id="ptt2Hold"
+        type="button"
+        class="relative z-10 flex-1 py-1.5 text-xs font-bold text-center text-emerald-600 dark:text-emerald-400 transition-colors flex items-center justify-center space-x-1.5">
+        <i class="fa-solid fa-hand-pointer text-[10px]"></i>
+        <span>Hold to Talk</span>
+    </button>
+
+    <button
+        id="ptt2Toggle"
+        type="button"
+        class="relative z-10 flex-1 py-1.5 text-xs font-bold text-center text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center space-x-1.5">
+        <i class="fa-solid fa-toggle-on text-[10px]"></i>
+        <span>Click Toggle</span>
+    </button>
+
+</div>
 
         <p id="ptt2Status" class="text-sm mb-4">Microphone ready</p>
-
 
         <button id="ptt2Button" class="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white shadow-xl flex flex-col items-center justify-center active:scale-95">
             <i class="fa-solid fa-microphone text-2xl mb-1"></i>
             <span id="ptt2Label" class="text-[10px] font-bold">HOLD TO TALK</span>
         </button>
-
         
         <p id="ptt2Instruction" class="text-xs text-slate-500 mt-3">
             Press and hold this button to speak
@@ -576,8 +694,7 @@ body {
     />
 </div>
 
-
-        <div class="mt-4 flex items-center gap-2">
+        <div class="hidden">
             <label for="speechLanguage2" class="text-sm">Speak in:</label>
             <select id="speechLanguage2" class="p-2 rounded-lg border dark:bg-slate-800">
                 <option value="en-US">English (US)</option>
@@ -593,12 +710,25 @@ body {
             </select>
         </div>
         
+<!-- Tell button moved underneath the second user's name -->
+<div class="mt-3 flex justify-center">
+    <button
+        id="tell2Btn"
+        type="button"
+        class="px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition flex items-center space-x-1.5"
+        title="Read Aloud / Tell Content">
+        <i class="fa-solid fa-volume-high"></i>
+        <span>Tell</span>
+    </button>
+</div>
+
     </div>
+    
 
     <!-- SECOND INPUT BOX -->
     <div id="input2VoiceBox" class="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         <h3 class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-2 text-sm font-semibold">
-                            <i class="fa-solid fa-microphone-lines mr-2 text-brand-500"></i> SECOND INPUT VOICE
+            <i class="fa-solid fa-microphone-lines mr-2 text-brand-500"></i> SECOND INPUT VOICE
         </h3>
         
         <textarea id="input2Text"
@@ -704,16 +834,7 @@ body {
     <!-- Right group: action buttons -->
     <div class="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0">
 
-        <button id="tell2Btn" type="button"
-            class="px-3 py-1.5 rounded-lg border border-indigo-200
-                   dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50
-                   text-xs font-semibold text-indigo-700 dark:text-indigo-300
-                   hover:bg-indigo-100 transition flex items-center
-                   space-x-1.5 shrink-0"
-            title="Read second output aloud">
-            <i class="fa-solid fa-volume-high"></i>
-            <span>Tell</span>
-        </button>
+        
 
         <button id="share2Btn" type="button"
             class="px-3 py-1.5 rounded-lg border border-sky-200
@@ -748,12 +869,10 @@ body {
     <span>Clear</span>
 </button>
 
-
     </div>
 </div>
 <!-- END SECOND OUTPUT HEADER -->
     
-        
 <div class="w-full">
     <div id="output2NameHeading"
          class="px-4 pt-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
@@ -767,12 +886,6 @@ body {
     Press and hold this button to speak
 </p>
 </div>
-
-
-        
-
-                    
-    
 
     <!-- SECOND FORMATTING STYLE -->
     <div class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
@@ -798,7 +911,6 @@ body {
 <!-- END SECOND INDEPENDENT WORKSPACE -->
 
 </main>
-            
 
     <div id="historyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
@@ -862,7 +974,6 @@ function updateUserNameDisplays() {
 userNameInput.addEventListener('input', updateUserNameDisplays);
 userNameInput2.addEventListener('input', updateUserNameDisplays);
 
-
         const pttButtonLabel = document.getElementById('pttButtonLabel');
         const pttPulseRing = document.getElementById('pttPulseRing');
         const statusDot = document.getElementById('statusDot');
@@ -872,11 +983,11 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
         const transcriptEditor = document.getElementById('transcriptEditor');
         const paragraphOutput = document.getElementById('paragraphOutput');
         const inputVoiceBox = document.getElementById('inputVoiceBox');
-const inputVoiceHeader = document.getElementById('inputVoiceHeader');
+        const inputVoiceHeader = document.getElementById('inputVoiceHeader');
 
-inputVoiceHeader.addEventListener('click', () => {
-    inputVoiceBox.classList.toggle('input-voice-expanded');
-});
+        inputVoiceHeader.addEventListener('click', () => {
+            inputVoiceBox.classList.toggle('input-voice-expanded');
+        });
         const wordCountEl = document.getElementById('wordCount');
         const charCountEl = document.getElementById('charCount');
         const copyBtn = document.getElementById('copyBtn');
@@ -888,15 +999,13 @@ inputVoiceHeader.addEventListener('click', () => {
         languageSelect.addEventListener('change', updateUserNameDisplays);
         outputLanguage2.addEventListener('change', updateUserNameDisplays);
 
-updateUserNameDisplays();
+        updateUserNameDisplays();
         const speechSpeed = document.getElementById('speechSpeed');
-const speechSpeedValue = document.getElementById('speechSpeedValue');
+        const speechSpeedValue = document.getElementById('speechSpeedValue');
 
-speechSpeed.addEventListener('input', () => {
-    speechSpeedValue.textContent =
-        `${Number(speechSpeed.value).toFixed(1)}×`;
-});
-
+        speechSpeed.addEventListener('input', () => {
+            speechSpeedValue.textContent = `${Number(speechSpeed.value).toFixed(1)}×`;
+        });
 
         const tabHold = document.getElementById('tabHold');
         const tabToggle = document.getElementById('tabToggle');
@@ -921,6 +1030,7 @@ speechSpeed.addEventListener('input', () => {
         let currentFormattingMode = 'paragraph';
         let recognition = null;
         let finalTranscriptAccumulator = '';
+        let isSecondPttTranslationInProgress = false; // <-- Added globally here
         
         let micPermissionGranted = false;
 
@@ -953,7 +1063,6 @@ speechSpeed.addEventListener('input', () => {
             if (micPermissionGranted) return true;
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                // Stop tracks immediately after securing permission
                 stream.getTracks().forEach(track => track.stop());
                 micPermissionGranted = true;
                 return true;
@@ -973,38 +1082,42 @@ speechSpeed.addEventListener('input', () => {
         } else {
             recognition = new SpeechRecognition();
             
+            recognition.lang = speechLanguageSelect.value;
+            recognition.maxAlternatives = 3;
 
-recognition.lang = speechLanguageSelect.value;
-recognition.maxAlternatives = 3;
+            speechLanguageSelect.addEventListener('change', () => {
+                if (!recognition) return;
 
-// Update speech recognition when "Speak in" changes
-speechLanguageSelect.addEventListener('change', () => {
-    if (!recognition) return;
+                recognition.lang = speechLanguageSelect.value;
 
-    recognition.lang = speechLanguageSelect.value;
+                if (isListening) {
+                    try {
+                        recognition.stop();
+                        showToast("Language changed. Start speaking again.");
+                    } catch (error) {
+                        console.error("Could not change speech language:", error);
+                    }
+                } else {
+                    showToast(
+                        "Speak in: " +
+                        speechLanguageSelect.options[
+                            speechLanguageSelect.selectedIndex
+                        ].text
+                    );
+                }
+            });
 
-    if (isListening) {
-        try {
-            recognition.stop();
-            showToast("Language changed. Start speaking again.");
-        } catch (error) {
-            console.error("Could not change speech language:", error);
-        }
-    } else {
-        showToast(
-            "Speak in: " +
-            speechLanguageSelect.options[
-                speechLanguageSelect.selectedIndex
-            ].text
-        );
-    }
-});
-
-
-
-recognition.onstart = () => {
+            recognition.onstart = () => {
     isListening = true;
     updateUIState(true);
+
+    window.setSpeakerLiveStatus?.(1, true);
+};
+
+recognition.onend = () => {
+    isListening = false;
+
+    window.setSpeakerLiveStatus?.(1, false);
 };
         
             recognition.onresult = async (event) => {
@@ -1019,32 +1132,66 @@ recognition.onstart = () => {
                     }
                 }
 
-        if (newFinal.trim()) {
+                
+if (newFinal.trim()) {
     const spokenText = formatSpokenText(
         newFinal.trim(),
         currentFormattingMode
     );
 
-    // Replace the previous text in both workspaces.
-paragraphOutput.value = spokenText;
-input2Text.value = spokenText;
+    paragraphOutput.value = spokenText;
+    input2Text.value = spokenText;
 
-finalTranscriptAccumulator = spokenText;
-updateCounts();
-interimBadge.classList.add('hidden');
+    finalTranscriptAccumulator = spokenText;
+    updateCounts();
+    interimBadge.classList.add('hidden');
+
+    
+    // Remember the existing second output so we speak only new text.
+    const previousOutput2 = output2Text.value.trimEnd();
+
     const langName =
         languageSelect.options[languageSelect.selectedIndex].text;
 
+    // Keep the existing first-output translation.
     await translateContentToLanguage(
-    languageSelect.value,
-    langName
-);
+        languageSelect.value,
+        langName,
+        spokenText,
+        speechLanguageSelect.value,
+        () => true,
+        true
+    );
 
-await translateSecondOutput(
-    spokenText,
-    speechLanguageSelect.value
-);
+    // Translate into the second output and append the result.
+    const secondOutputTranslationSucceeded = await translateSecondOutput(
+        spokenText,
+        speechLanguageSelect.value,
+        true
+    );
+
+    
+
+
+    // Extract only the newly added text from the second output.
+    const currentOutput2 = output2Text.value;
+    const newlyTranslatedText2 = currentOutput2.startsWith(previousOutput2)
+        ? currentOutput2.slice(previousOutput2.length).trim()
+        : '';
+
+    // Start the countdown timer after translation finishes.
+    if (autoTellTimer1 !== null) {
+        clearTimeout(autoTellTimer1);
+    }
+
+    if (newlyTranslatedText2) {
+        autoTellTimer1 = setTimeout(() => {
+            speakNewText(newlyTranslatedText2, 2);
+            autoTellTimer1 = null;
+        }, AUTO_SPEECH_DELAY);
+    }
 }
+
 
                 if (interim) {
                     interimText.textContent = interim;
@@ -1053,6 +1200,7 @@ await translateSecondOutput(
             };
 
             recognition.onerror = (event) => {
+                window.setSpeakerLiveStatus?.(1, false);
                 console.error("Speech recognition error", event.error);
                 if (event.error !== 'no-speech') {
                     showToast("Speech recognition error occurred");
@@ -1065,129 +1213,250 @@ await translateSecondOutput(
                 updateUIState(false);
                 interimBadge.classList.add('hidden');
             };
+        }
+// LIVE SPEAKER POPUPS — BOTH OUTPUT BOXES
+(() => {
+    const firstOutput = document.getElementById('transcriptEditor');
+    const secondOutput = document.getElementById('output2Text');
+
+    const firstNameInput = document.getElementById('userNameInput');
+    const secondNameInput = document.getElementById('userNameInput2');
+
+    function createSpeakerPopup(outputElement, popupId) {
+        if (!outputElement || !outputElement.parentElement) {
+            console.warn('[SPEAKER POPUP] Output element not found:', popupId);
+            return null;
+        }
+
+        const container = outputElement.parentElement;
+
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
+
+        const popup = document.createElement('div');
+        popup.id = popupId;
+        popup.className = 'speaker-live-popup';
+        popup.setAttribute('role', 'status');
+        popup.setAttribute('aria-live', 'polite');
+
+        popup.innerHTML = `
+            <span class="speaker-live-mic">
+                <i class="fas fa-microphone"></i>
+            </span>
+            <span class="speaker-live-label"></span>
+        `;
+
+        container.appendChild(popup);
+
+        return popup;
+    }
+
+    const popup1 = createSpeakerPopup(
+        firstOutput,
+        'speakerLivePopup1'
+    );
+
+    const popup2 = createSpeakerPopup(
+        secondOutput,
+        'speakerLivePopup2'
+    );
+
+    function getSpeakerName(workspace) {
+        const input = workspace === 1
+            ? firstNameInput
+            : secondNameInput;
+
+        const name = input?.value.trim();
+
+        return name || (workspace === 1 ? 'User 1' : 'User 2');
+    }
+
+    window.setSpeakerLiveStatus = function (workspace, isSpeaking) {
+        const popups = [popup1, popup2];
+
+        popups.forEach((popup) => {
+            if (!popup) return;
+
+            const label = popup.querySelector('.speaker-live-label');
+
+            if (isSpeaking) {
+                label.textContent =
+                    `${getSpeakerName(workspace)} is speaking…`;
+
+                popup.classList.add('is-speaking');
+            } else {
+                popup.classList.remove('is-speaking');
+            }
+        });
+
+        console.log('[SPEAKER POPUP]', {
+            workspace,
+            isSpeaking,
+            speaker: getSpeakerName(workspace)
+        });
+    };
+})();
         
-}
-    
+let autoTellTimer1 = null;
+let autoTellTimer2 = null;
+const AUTO_SPEECH_DELAY = 1500; // Snappier 1.5s delay for automatic reading
 
-        
 
+function speakNewText(text, workspace) {
+    const newText = (text || '').trim();
 
-let previousFirstOutputLanguage = languageSelect.value;
-let firstOutputLanguageChangeRequestId = 0;
+    if (!newText) return;
 
-languageSelect.addEventListener('change', async () => {
-    const requestId = ++firstOutputLanguageChangeRequestId;
-
-    const editedText = transcriptEditor.value.trim();
-    const sourceLanguage = previousFirstOutputLanguage;
-    const targetLanguage = languageSelect.value;
-
-    previousFirstOutputLanguage = targetLanguage;
-
-    if (!editedText) {
-        showToast("First output is empty. Enter text before changing its language.");
+    if (
+        !('speechSynthesis' in window) ||
+        typeof SpeechSynthesisUtterance === 'undefined'
+    ) {
+        showToast('Text-to-speech is not supported in this browser.');
         return;
     }
 
-    const langName =
-        languageSelect.options[languageSelect.selectedIndex].text;
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(newText);
 
-    await translateContentToLanguage(
-        targetLanguage,
-        langName,
-        editedText,
-        sourceLanguage,
-        () =>
-            requestId === firstOutputLanguageChangeRequestId &&
-            transcriptEditor.value.trim() === editedText
-    );
-});
+    if (workspace === 1) {
+        utterance.lang = languageSelect.value;
+        utterance.rate = Number(speechSpeed.value);
+
+        if (!setBestVoice(utterance, languageSelect.value)) {
+            showToast('No installed speech voice supports this language.');
+            return;
+        }
+    } else if (workspace === 2) {
+        utterance.lang = outputLanguage2.value;
+        utterance.rate = Number(
+            document.getElementById('output2Speed').value
+        );
+
+        if (!setBestVoice(utterance, outputLanguage2.value)) {
+            showToast('No installed speech voice supports this language.');
+            return;
+        }
+    } else {
+        return;
+    }
+
+    synth.cancel();
+    synth.speak(utterance);
+}
 
 
 
+        let previousFirstOutputLanguage = languageSelect.value;
+        let firstOutputLanguageChangeRequestId = 0;
 
-async function translateContentToLanguage(
+        languageSelect.addEventListener('change', async () => {
+            const requestId = ++firstOutputLanguageChangeRequestId;
+
+            const editedText = transcriptEditor.value.trim();
+            const sourceLanguage = previousFirstOutputLanguage;
+            const targetLanguage = languageSelect.value;
+
+            previousFirstOutputLanguage = targetLanguage;
+
+            if (!editedText) {
+                showToast("First output is empty. Enter text before changing its language.");
+                return;
+            }
+
+            const langName =
+                languageSelect.options[languageSelect.selectedIndex].text;
+
+            await translateContentToLanguage(
+                targetLanguage,
+                langName,
+                editedText,
+                sourceLanguage,
+                () =>
+                    requestId === firstOutputLanguageChangeRequestId &&
+                    transcriptEditor.value.trim() === editedText
+            );
+        });
+
+        async function translateContentToLanguage(
     langCode,
     langName,
     sourceTextOverride = null,
     sourceLanguageOverride = null,
-    isRequestCurrent = () => true
+    isRequestCurrent = () => true,
+    appendOutput = false
 ) {
-    const sourceText = (
-        sourceTextOverride ?? paragraphOutput.value
-    ).trim();
+            const sourceText = (
+                sourceTextOverride ?? paragraphOutput.value
+            ).trim();
 
-    if (!sourceText) {
-        showToast("Speak or enter text in INPUT VOICE first.");
-        return;
-    }
+            if (!sourceText) {
+                showToast("Speak or enter text in INPUT VOICE first.");
+                return;
+            }
 
-    const sourceLang = (
-        sourceLanguageOverride ?? speechLanguageSelect.value
-    ).split("-")[0];
+            const sourceLang = (
+                sourceLanguageOverride ?? speechLanguageSelect.value
+            ).split("-")[0];
 
-    const targetLang = langCode.split("-")[0];
+            const targetLang = langCode.split("-")[0];
 
-    if (sourceLang === targetLang) {
-        transcriptEditor.value = sourceText;
-        updateCounts();
-        showToast("Source and output languages are the same.");
-        return;
-    }
+            if (sourceLang === targetLang) {
+                transcriptEditor.value =
+    appendOutput && transcriptEditor.value.trim()
+        ? `${transcriptEditor.value.trimEnd()}\n${sourceText}`
+        : sourceText;
+                updateCounts();
+                showToast("Source and output languages are the same.");
+                return;
+            }
 
-    showToast(`Translating to ${langName}...`);
+            showToast(`Translating to ${langName}...`);
 
-    try {
-        const url =
-            "https://translate.googleapis.com/translate_a/single" +
-            "?client=gtx&sl=" +
-            encodeURIComponent(sourceLang) +
-            "&tl=" +
-            encodeURIComponent(targetLang) +
-            "&dt=t&q=" +
-            encodeURIComponent(sourceText);
+            try {
+                const url =
+                    "https://translate.googleapis.com/translate_a/single" +
+                    "?client=gtx&sl=" +
+                    encodeURIComponent(sourceLang) +
+                    "&tl=" +
+                    encodeURIComponent(targetLang) +
+                    "&dt=t&q=" +
+                    encodeURIComponent(sourceText);
 
-        const response = await fetch(url);
-        const data = await response.json();
+                const response = await fetch(url);
+                const data = await response.json();
 
-        const translated = Array.isArray(data?.[0])
-            ? data[0]
-                .map(part => Array.isArray(part) ? part[0] || "" : "")
-                .join("")
-                .trim()
-            : "";
+                const translated = Array.isArray(data?.[0])
+                    ? data[0]
+                        .map(part => Array.isArray(part) ? part[0] || "" : "")
+                        .join("")
+                        .trim()
+                    : "";
 
-        console.log("Google translation response:", {
-            status: response.status,
-            sourceLang,
-            targetLang,
-            translatedText: translated
-        });
+                if (response.ok && translated) {
+                    if (!isRequestCurrent()) {
+                        return;
+                    }
 
-        if (response.ok && translated) {
-    if (!isRequestCurrent()) {
-        return;
-    }
+                    transcriptEditor.value =
+    appendOutput && transcriptEditor.value.trim()
+        ? `${transcriptEditor.value.trimEnd()}\n${translated}`
+        : translated;
+                    updateCounts();
+                    showToast(`Translated to ${langName}!`);
+                    return;
+                }
 
-    transcriptEditor.value = translated;
-    updateCounts();
-    showToast(`Translated to ${langName}!`);
-    return;
-}
+                showToast("Translation unavailable. Please try again.");
+            } catch (error) {
+                showToast("Translation failed. Check your internet connection.");
+            }
+        }
 
-        console.error("Translation unavailable:", data);
-        showToast("Translation unavailable. Please try again.");
-    } catch (error) {
-        console.error("Translation API error:", error);
-        showToast("Translation failed. Check your internet connection.");
-    }
-}
-
-
-
-async function translateSecondOutput(
+        async function translateSecondOutput(
     sourceTextOverride = null,
-    sourceLanguageOverride = null
+    sourceLanguageOverride = null,
+    appendOutput = false
 ) {
     const text = (
         sourceTextOverride ?? input2Text.value
@@ -1204,8 +1473,17 @@ async function translateSecondOutput(
 
     const targetLang = outputLanguage2.value.split("-")[0];
 
+    if (appendOutput && sourceTextOverride) {
+        const existingInput = input2Text.value.trimEnd();
+        input2Text.value = existingInput ? `${existingInput}\n${sourceTextOverride}` : sourceTextOverride;
+    }
+
     if (sourceLang === targetLang) {
-        output2Text.value = text;
+        output2Text.value =
+            appendOutput && output2Text.value.trim()
+                ? `${output2Text.value.trimEnd()}\n${text}`
+                : text;
+
         return;
     }
 
@@ -1229,27 +1507,20 @@ async function translateSecondOutput(
                 .trim()
             : "";
 
-        console.log("Google second translation response:", {
-            status: response.status,
-            sourceLang,
-            targetLang,
-            translatedText: translated
-        });
-
         if (response.ok && translated) {
-            output2Text.value = translated;
+            output2Text.value =
+                appendOutput && output2Text.value.trim()
+                    ? `${output2Text.value.trimEnd()}\n${translated}`
+                    : translated;
         } else {
-            console.error("Second translation unavailable:", data);
             showToast("Second output translation unavailable.");
         }
     } catch (error) {
-        console.error("Second translation error:", error);
         showToast(
             "Second output translation failed. Check your internet connection."
         );
     }
 }
-
 
         function formatSpokenText(text, mode) {
             const lang = speechLanguageSelect.value;
@@ -1287,7 +1558,6 @@ async function translateSecondOutput(
                 pttButton.classList.add('ring-4', 'ring-emerald-500/40', 'scale-105');
                 pttPulseRing.classList.remove('hidden');
                 pttButtonLabel.textContent = "LISTENING";
-                
             } else {
                 statusDot.className = "w-2 h-2 rounded-full bg-slate-400";
                 statusText.textContent = "Microphone ready";
@@ -1295,26 +1565,7 @@ async function translateSecondOutput(
                 pttButton.classList.remove('ring-4', 'ring-emerald-500/40', 'scale-105');
                 pttPulseRing.classList.add('hidden');
                 pttButtonLabel.textContent = isToggleMode ? "CLICK TO START" : "HOLD TO TALK";
-                
             }
-        }
-
-        function startVisualizerAnimation() {
-            const bars = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4'), document.getElementById('bar5'), document.getElementById('bar6')];
-            visualizerInterval = setInterval(() => {
-                bars.forEach(bar => {
-                    const randomHeight = Math.floor(Math.random() * 24) + 4;
-                    bar.style.height = `${randomHeight}px`;
-                });
-            }, 120);
-        }
-
-        function stopVisualizerAnimation() {
-            if (visualizerInterval) clearInterval(visualizerInterval);
-            const bars = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4'), document.getElementById('bar5'), document.getElementById('bar6')];
-            bars.forEach((bar, idx) => {
-                bar.style.height = `${[8, 16, 20, 12, 16, 8][idx]}px`;
-            });
         }
 
         async function startListening() {
@@ -1325,8 +1576,8 @@ async function translateSecondOutput(
 
             try {
                 finalTranscriptAccumulator = paragraphOutput.value
-    ? paragraphOutput.value.trim() + ' '
-    : '';
+                    ? paragraphOutput.value.trim() + ' '
+                    : '';
                 recognition.start();
             } catch (e) {
                 console.error(e);
@@ -1334,6 +1585,7 @@ async function translateSecondOutput(
         }
 
         function stopListening() {
+            window.setSpeakerLiveStatus?.(1, false);
             if (!recognition || !isListening) return;
             try {
                 recognition.stop();
@@ -1425,159 +1677,178 @@ async function translateSecondOutput(
         });
 
         function updateCounts() {
-    const text = transcriptEditor.value.trim();
-    const words = text ? text.split(/\s+/).length : 0;
-    const chars = text.length;
-    wordCountEl.textContent = `${words} word${words === 1 ? '' : 's'}`;
-    charCountEl.textContent = `${chars} char${chars === 1 ? '' : 's'}`;
-}
+            const text = transcriptEditor.value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            const chars = text.length;
+            wordCountEl.textContent = `${words} word${words === 1 ? '' : 's'}`;
+            charCountEl.textContent = `${chars} char${chars === 1 ? '' : 's'}`;
+        }
+
+        transcriptEditor.addEventListener('input', () => {
+            updateCounts();
+        });
+
+
+let manualTypeTranslateTimer = null;
 
 transcriptEditor.addEventListener('input', () => {
-    updateCounts();
-});
+    finalTranscriptAccumulator = transcriptEditor.value;
 
-// FIXED: Added automatic translation and language detection for manual typing in INPUT VOICE
-let manualTypeTranslateTimer = null;
-paragraphOutput.addEventListener('input', () => {
-    finalTranscriptAccumulator = paragraphOutput.value;
-    
     clearTimeout(manualTypeTranslateTimer);
-    const typedText = paragraphOutput.value.trim();
+
+    // Do not let manual typing translation interfere with
+    // the second PTT's translation.
+    if (isSecondPttTranslationInProgress) {
+        return;
+    }
+
+    const typedText = transcriptEditor.value.trim();
 
     if (!typedText) {
-        transcriptEditor.value = '';
         output2Text.value = '';
+        input2Text.value = '';
         updateCounts();
         return;
     }
 
     manualTypeTranslateTimer = setTimeout(async () => {
-        const langName = languageSelect.options[languageSelect.selectedIndex].text;
+        // Check again before starting the delayed translation.
+        if (isSecondPttTranslationInProgress) {
+            return;
+        }
 
-        // Auto-detect source language ('auto') and translate to Workspace 1
-        await translateContentToLanguage(
-            languageSelect.value,
-            langName,
-            typedText,
-            'auto'
-        );
+        const langName =
+            languageSelect.options[languageSelect.selectedIndex].text;
 
-        // Sync and auto-detect source language ('auto') for Workspace 2
         input2Text.value = typedText;
+
         await translateSecondOutput(
             typedText,
-            'auto'
+            speechLanguageSelect.value
         );
     }, 700);
 });
 
-function getAvailableVoices() {
-    return new Promise((resolve) => {
-        const synth = window.speechSynthesis;
-        let voices = synth.getVoices();
+        function getAvailableVoices() {
+            return new Promise((resolve) => {
+                const synth = window.speechSynthesis;
+                let voices = synth.getVoices();
 
-        if (voices.length > 0) {
-            resolve(voices);
-            return;
+                if (voices.length > 0) {
+                    resolve(voices);
+                    return;
+                }
+
+                const onVoicesChanged = () => {
+                    voices = synth.getVoices();
+
+                    if (voices.length > 0) {
+                        synth.removeEventListener("voiceschanged", onVoicesChanged);
+                        clearTimeout(timeoutId);
+                        resolve(voices);
+                    }
+                };
+
+                synth.addEventListener("voiceschanged", onVoicesChanged);
+
+                const timeoutId = setTimeout(() => {
+                    synth.removeEventListener("voiceschanged", onVoicesChanged);
+                    resolve(synth.getVoices());
+                }, 2000);
+            });
         }
 
-        const onVoicesChanged = () => {
-            voices = synth.getVoices();
+        function setBestVoice(utterance, selectedLanguage) {
+            const voices = window.speechSynthesis.getVoices();
+            const requested = (selectedLanguage || "en-US").toLowerCase();
+            const languageCode = requested.split("-")[0];
 
-            if (voices.length > 0) {
-                synth.removeEventListener("voiceschanged", onVoicesChanged);
-                clearTimeout(timeoutId);
-                resolve(voices);
+            const voice =
+                voices.find(v =>
+                    v.lang.toLowerCase() === requested &&
+                    /natural|neural|google|microsoft/i.test(v.name)
+                ) ||
+                voices.find(v =>
+                    v.lang.toLowerCase() === requested
+                ) ||
+                voices.find(v =>
+                    v.lang.toLowerCase().split("-")[0] === languageCode &&
+                    /natural|neural|google|microsoft/i.test(v.name)
+                ) ||
+                voices.find(v =>
+                    v.lang.toLowerCase().split("-")[0] === languageCode
+                );
+
+            utterance.lang = selectedLanguage || "en-US";
+
+            if (!voice) {
+                return false;
             }
-        };
 
-        synth.addEventListener("voiceschanged", onVoicesChanged);
-
-        const timeoutId = setTimeout(() => {
-            synth.removeEventListener("voiceschanged", onVoicesChanged);
-            resolve(synth.getVoices());
-        }, 2000);
-    });
-}
-
-function setBestVoice(utterance, selectedLanguage) {
-    const voices = window.speechSynthesis.getVoices();
-    const requested = (selectedLanguage || "en-US").toLowerCase();
-    const languageCode = requested.split("-")[0];
-
-    const voice =
-        voices.find(v =>
-            v.lang.toLowerCase() === requested &&
-            /natural|neural|google|microsoft/i.test(v.name)
-        ) ||
-        voices.find(v =>
-            v.lang.toLowerCase() === requested
-        ) ||
-        voices.find(v =>
-            v.lang.toLowerCase().split("-")[0] === languageCode &&
-            /natural|neural|google|microsoft/i.test(v.name)
-        ) ||
-        voices.find(v =>
-            v.lang.toLowerCase().split("-")[0] === languageCode
-        );
-
-    utterance.lang = selectedLanguage || "en-US";
-
-    if (!voice) {
-        return false;
-    }
-
-    utterance.voice = voice;
-    return true;
-}
-
-        tellBtn.addEventListener('click', () => {
-    const text = transcriptEditor.value.trim();
-
-    if (!text) {
-        showToast("Nothing to tell! Editor is empty.");
-        return;
-    }
-
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-        showToast("Text-to-speech not supported in this browser.");
-        return;
-    }
-
-    const synth = window.speechSynthesis;
-
-    if (synth.speaking || synth.pending) {
-        synth.cancel();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    setBestVoice(utterance, languageSelect.value);
-
-    try {
-        synth.resume();
-    } catch (e) {
-        console.warn("Speech synthesis resume warning:", e);
-    }
-
-    utterance.onstart = () => {
-        showToast("Telling contents out loud...");
-        tellBtn.classList.add('animate-pulse', 'bg-indigo-200');
-    };
-
-    utterance.onend = () => {
-        tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
-    };
-
-    utterance.onerror = (event) => {
-        tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
-        if (event.error === 'canceled' || event.error === 'interrupted') {
-            return;
+            utterance.voice = voice;
+            return true;
         }
-        showToast("Error reading text.");
-    };
 
-    synth.speak(utterance);
-});
+        // UPDATED tellBtn click listener supporting speech speed & garbage collection safety
+        tellBtn.addEventListener('click', async () => {
+            const text = transcriptEditor.value.trim();
+
+            if (!text) {
+                showToast("Nothing to tell! Editor is empty.");
+                return;
+            }
+
+            if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+                showToast("Text-to-speech not supported in this browser.");
+                return;
+            }
+
+            const synth = window.speechSynthesis;
+
+            if (synth.speaking || synth.pending) {
+                synth.cancel();
+            }
+
+            await getAvailableVoices();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = Number(speechSpeed.value);
+            setBestVoice(utterance, languageSelect.value);
+
+            window.activeUtterance = utterance;
+
+            try {
+                synth.resume();
+            } catch (e) {
+                console.warn("Speech synthesis resume warning:", e);
+            }
+
+            utterance.onstart = () => {
+                showToast("Telling contents out loud...");
+                tellBtn.classList.add('animate-pulse', 'bg-indigo-200');
+            };
+
+            utterance.onend = () => {
+                tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
+            };
+
+            utterance.onerror = (event) => {
+                tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
+                if (event.error === 'canceled' || event.error === 'interrupted') {
+                    return;
+                }
+                showToast("Error reading text.");
+            };
+
+            setTimeout(() => {
+                try {
+                    synth.speak(utterance);
+                } catch (e) {
+                    console.error("Speech synthesis error:", e);
+                    showToast("Could not start speech synthesis.");
+                }
+            }, 100);
+        });
 
         liveShareBtn.addEventListener('click', () => {
             const text = transcriptEditor.value.trim();
@@ -1637,12 +1908,12 @@ function setBestVoice(utterance, selectedLanguage) {
         });
 
         clearBtn.addEventListener('click', () => {
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-        transcriptEditor.value = '';
-paragraphOutput.value = '';
-finalTranscriptAccumulator = '';
-updateCounts();
-showToast("Editor cleared.");
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            transcriptEditor.value = '';
+            paragraphOutput.value = '';
+            finalTranscriptAccumulator = '';
+            updateCounts();
+            showToast("Editor cleared.");
         });
 
         function getSavedHistory() {
@@ -1666,24 +1937,24 @@ showToast("Editor cleared.");
             }
             const history = getSavedHistory();
             const newNote = {
-    id: Date.now(),
-    date: new Date().toLocaleString(),
-    mode: currentFormattingMode,
-    language: languageSelect.options[languageSelect.selectedIndex].text,
-    fullText: text,
-    cloudOwnerUid: window.currentVoiceToParaUserUid || null,
-    cloudSynced: false
-};
+                id: Date.now(),
+                date: new Date().toLocaleString(),
+                mode: currentFormattingMode,
+                language: languageSelect.options[languageSelect.selectedIndex].text,
+                fullText: text,
+                cloudOwnerUid: window.currentVoiceToParaUserUid || null,
+                cloudSynced: false
+            };
             history.unshift(newNote);
 
-localStorage.setItem('voice_to_para_notes', JSON.stringify(history));
+            localStorage.setItem('voice_to_para_notes', JSON.stringify(history));
 
-if (window.syncNoteToCloud) {
-    window.syncNoteToCloud(newNote);
-}
+            if (window.syncNoteToCloud) {
+                window.syncNoteToCloud(newNote);
+            }
 
-updateSavedNotesBadge();
-showToast("Note saved successfully!");
+            updateSavedNotesBadge();
+            showToast("Note saved successfully!");
             
             renderHistoryList();
             historyModal.classList.remove('hidden');
@@ -1754,16 +2025,16 @@ showToast("Note saved successfully!");
         }
                 
         window.loadHistoryItem = function(id) {
-    const history = getSavedHistory();
-    const item = history.find(h => h.id === id);
+            const history = getSavedHistory();
+            const item = history.find(h => h.id === id);
 
-    if (item) {
-        transcriptEditor.value = item.fullText;
-        updateCounts();
-        historyModal.classList.add('hidden');
-        showToast("Note loaded into editor!");
-    }
-};
+            if (item) {
+                transcriptEditor.value = item.fullText;
+                updateCounts();
+                historyModal.classList.add('hidden');
+                showToast("Note loaded into editor!");
+            }
+        };
 
         window.deleteHistoryItem = function(id) {
             let history = getSavedHistory();
@@ -2069,6 +2340,7 @@ showToast("Note saved successfully!");
     const ptt2Button = document.getElementById('ptt2Button');
     const ptt2Hold = document.getElementById('ptt2Hold');
     const ptt2Toggle = document.getElementById('ptt2Toggle');
+    const ptt2TabIndicator = document.getElementById('ptt2TabIndicator');
     const ptt2Status = document.getElementById('ptt2Status');
     const ptt2Label = document.getElementById('ptt2Label');
     const ptt2Instruction = document.getElementById('ptt2Instruction');
@@ -2076,23 +2348,36 @@ showToast("Note saved successfully!");
     const input2Text = document.getElementById('input2Text');
     const output2Text = document.getElementById('output2Text');
     
-    let firstToSecondTranslateTimer = null;
+    
+let firstToSecondTranslateTimer = null;
 
-    transcriptEditor.addEventListener('input', () => {
-        clearTimeout(firstToSecondTranslateTimer);
-        secondOutputTranslationRequestId++;
 
-        const typedText = transcriptEditor.value.trim();
+transcriptEditor.addEventListener('input', () => {
+    clearTimeout(firstToSecondTranslateTimer);
 
-        if (!typedText) {
-            output2Text.value = '';
+    // Do not let automatic typing translation overwrite
+    // the second PTT's translation while it is running.
+    if (isSecondPttTranslationInProgress) {
+        return;
+    }
+
+    secondOutputTranslationRequestId++;
+
+    const typedText = transcriptEditor.value.trim();
+
+    if (!typedText) {
+        output2Text.value = '';
+        return;
+    }
+
+    firstToSecondTranslateTimer = setTimeout(async () => {
+        if (isSecondPttTranslationInProgress) {
             return;
         }
 
-        firstToSecondTranslateTimer = setTimeout(async () => {
-            await translateSecondOutput(typedText, 'auto');
-        }, 700);
-    });
+        await translateSecondOutput(typedText, 'auto');
+    }, 700);
+});
 
     let outputToFirstTranslateTimer = null;
     let outputToFirstTranslateRequest = 0;
@@ -2127,7 +2412,7 @@ showToast("Note saved successfully!");
                 'auto',
                 () =>
                     requestId === outputToFirstTranslateRequest &&
-                    output2Text.value.trim() === typedText
+                    output2Text.value.trim() !== typedText
             );
 
             if (requestId === outputToFirstTranslateRequest) {
@@ -2208,18 +2493,25 @@ showToast("Note saved successfully!");
             stopListening2();
         }
 
-        ptt2Hold.classList.toggle('bg-emerald-600', !toggleMode2);
-        ptt2Hold.classList.toggle('text-white', !toggleMode2);
-        ptt2Hold.classList.toggle('bg-slate-200', toggleMode2);
+        ptt2TabIndicator.style.transform = toggleMode2
+            ? 'translateX(100%)'
+            : 'translateX(0%)';
 
-        ptt2Toggle.classList.toggle('bg-emerald-600', toggleMode2);
-        ptt2Toggle.classList.toggle('text-white', toggleMode2);
-        ptt2Toggle.classList.toggle('bg-slate-200', !toggleMode2);
+        ptt2Hold.classList.toggle('text-emerald-600', !toggleMode2);
+        ptt2Hold.classList.toggle('dark:text-emerald-400', !toggleMode2);
+        ptt2Hold.classList.toggle('text-slate-500', toggleMode2);
+        ptt2Hold.classList.toggle('dark:text-slate-400', toggleMode2);
+
+        ptt2Toggle.classList.toggle('text-emerald-600', toggleMode2);
+        ptt2Toggle.classList.toggle('dark:text-emerald-400', toggleMode2);
+        ptt2Toggle.classList.toggle('text-slate-500', !toggleMode2);
+        ptt2Toggle.classList.toggle('dark:text-slate-400', !toggleMode2);
 
         updateStatus2();
     }
 
     function stopListening2() {
+        window.setSpeakerLiveStatus?.(2, false);
         if (!recognition2 || !listening2) return;
         try {
             recognition2.stop();
@@ -2296,43 +2588,104 @@ showToast("Note saved successfully!");
             updateStatus2();
         };
 
-        recognition2.onresult = async event => {
-            let spoken = '';
+recognition2.onstart = () => {
+    listening2 = true;
 
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) {
-                    spoken += event.results[i][0].transcript.trim() + ' ';
-                }
-            }
+    window.setSpeakerLiveStatus?.(2, true);
+};
 
-            spoken = spoken.trim();
-            if (!spoken) return;
+recognition2.onend = () => {
+    listening2 = false;
 
-            const formatted = formatText2(spoken);
+    window.setSpeakerLiveStatus?.(2, false);
+};
+recognition2.onresult = async event => {
+    let spoken = '';
 
-            paragraphOutput.value = formatted;
-            input2Text.value = formatted;
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+            spoken += event.results[i][0].transcript.trim() + ' ';
+        }
+    }
 
-            finalTranscriptAccumulator = formatted;
-            finalText2 = formatted;
-            updateCounts();
+    spoken = spoken.trim();
+    if (!spoken) return;
 
-            const langName = languageSelect.options[languageSelect.selectedIndex].text;
+    isSecondPttTranslationInProgress = true;
 
-            await translateContentToLanguage(
-                languageSelect.value,
-                langName,
-                formatted,
-                speechLanguage2.value
-            );
+    clearTimeout(firstToSecondTranslateTimer);
+    secondOutputTranslationRequestId++;
 
-            await translateSecondOutput(
-                formatted,
-                speechLanguage2.value
-            );
+    try {
+        const formatted = formatText2(spoken);
 
-            output2Text.scrollTop = output2Text.scrollHeight;
-        };
+        // Accumulate/append text properly instead of overwriting
+        const currentInput2 = input2Text.value.trimEnd();
+        const updatedInput2 = currentInput2 ? `${currentInput2}\n${formatted}` : formatted;
+
+        paragraphOutput.value = updatedInput2;
+        input2Text.value = updatedInput2;
+
+        finalTranscriptAccumulator = updatedInput2;
+        finalText2 = updatedInput2;
+        updateCounts();
+
+
+        // Remember the existing first output before appending its translation.
+        const previousFirstOutput = transcriptEditor.value.trimEnd();
+
+        const langName =
+            languageSelect.options[languageSelect.selectedIndex].text;
+
+        // Translate the second PTT sentence into the first workspace output.
+        await translateContentToLanguage(
+            languageSelect.value,
+            langName,
+            formatted,
+            speechLanguage2.value,
+            () => true,
+            true
+        );
+
+        // Extract only the newly added sentence from the first output.
+        const currentFirstOutput = transcriptEditor.value.trim();
+
+        const newlyTranslatedText1 = previousFirstOutput
+            ? (
+                currentFirstOutput.startsWith(previousFirstOutput)
+                    ? currentFirstOutput
+                        .slice(previousFirstOutput.length)
+                        .trim()
+                    : ''
+            )
+            : currentFirstOutput;
+
+        // Automatically speak the new first-output sentence after the delay.
+        if (autoTellTimer2 !== null) {
+            clearTimeout(autoTellTimer2);
+        }
+
+        if (newlyTranslatedText1) {
+            autoTellTimer2 = setTimeout(() => {
+                // Second PTT -> first output -> Tell 1.
+                speakNewText(newlyTranslatedText1, 1);
+                autoTellTimer2 = null;
+            }, AUTO_SPEECH_DELAY);
+        }
+
+        // Keep the existing second-output translation working.
+        await translateSecondOutput(
+            formatted,
+            speechLanguage2.value,
+            true
+        );
+
+        output2Text.scrollTop = output2Text.scrollHeight;
+
+    } finally {
+        isSecondPttTranslationInProgress = false;
+    }
+};
 
         recognition2.onerror = event => {
             if (event.error !== 'no-speech') {
@@ -2357,7 +2710,8 @@ showToast("Note saved successfully!");
 
     async function translateSecondOutput(
         sourceTextOverride = null,
-        sourceLanguageOverride = null
+        sourceLanguageOverride = null,
+        appendOutput = false
     ) {
         const requestId = ++secondOutputTranslationRequestId;
         const text = (sourceTextOverride ?? input2Text.value).trim();
@@ -2371,11 +2725,21 @@ showToast("Note saved successfully!");
             return false;
         }
 
+        if (appendOutput && sourceTextOverride) {
+            const existingInput = input2Text.value.trimEnd();
+            input2Text.value = existingInput ? `${existingInput}\n${sourceTextOverride}` : sourceTextOverride;
+        }
+
         if (sourceLang === target) {
             if (requestId !== secondOutputTranslationRequestId) {
                 return false;
             }
-            output2Text.value = text;
+
+            output2Text.value =
+                appendOutput && output2Text.value.trim()
+                    ? `${output2Text.value.trimEnd()}\n${text}`
+                    : text;
+
             ptt2Status.textContent = 'Source and target languages are the same';
             showToast('Source and output languages are the same.');
             return true;
@@ -2406,7 +2770,11 @@ showToast("Note saved successfully!");
             }
 
             if (response.ok && data.responseStatus === 200 && translated) {
-                output2Text.value = translated;
+                output2Text.value =
+                    appendOutput && output2Text.value.trim()
+                        ? `${output2Text.value.trimEnd()}\n${translated}`
+                        : translated;
+
                 ptt2Status.textContent = 'Second output translated';
                 return true;
             }
