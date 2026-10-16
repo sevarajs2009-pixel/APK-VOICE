@@ -994,10 +994,20 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
         const clearBtn = document.getElementById('clearBtn');
         const tellBtn = document.getElementById('tellBtn');
         const liveShareBtn = document.getElementById('liveShareBtn');
-        const languageSelect = document.getElementById('languageSelect');
-        const speechLanguageSelect = document.getElementById('speechLanguageSelect');
-        languageSelect.addEventListener('change', updateUserNameDisplays);
-        outputLanguage2.addEventListener('change', updateUserNameDisplays);
+        
+const languageSelect = document.getElementById('languageSelect');
+const speechLanguageSelect = document.getElementById('speechLanguageSelect');
+
+// Keep speech recognition set to Tamil independently
+// of the first and second output language selectors.
+speechLanguageSelect.value = 'ta-IN';
+
+languageSelect.addEventListener('change', () => {
+    updateUserNameDisplays();
+});
+
+outputLanguage2.addEventListener('change', updateUserNameDisplays);
+
 
         updateUserNameDisplays();
         const speechSpeed = document.getElementById('speechSpeed');
@@ -1320,6 +1330,11 @@ function speakNewText(text, workspace) {
     }
 
     const synth = window.speechSynthesis;
+
+    if (synth.speaking || synth.pending) {
+        synth.cancel();
+    }
+
     const utterance = new SpeechSynthesisUtterance(newText);
 
     if (workspace === 1) {
@@ -1344,8 +1359,14 @@ function speakNewText(text, workspace) {
         return;
     }
 
-    synth.cancel();
-    synth.speak(utterance);
+    setTimeout(() => {
+        try {
+            synth.resume();
+            synth.speak(utterance);
+        } catch (e) {
+            console.error("Automatic speech synthesis error:", e);
+        }
+    }, 100);
 }
 
 
@@ -2320,7 +2341,7 @@ transcriptEditor.addEventListener('input', () => {
                 'auto',
                 () =>
                     requestId === outputToFirstTranslateRequest &&
-                    output2Text.value.trim() === typedText
+                    output2Text.value.trim() !== typedText
             );
 
             if (requestId === outputToFirstTranslateRequest) {
@@ -2369,14 +2390,14 @@ transcriptEditor.addEventListener('input', () => {
 
         const lang = speechLanguage2.value;
         if (lang.startsWith('hi') || lang.startsWith('bn') || lang.startsWith('mr')) {
-            if (!/[.?!|।]$/.test(text)) text += '।';
+            if (!/[.?!|।]\$/.test(text)) text += '।';
         } else if (lang.startsWith('ta') || lang.startsWith('te') || lang.startsWith('kn') || lang.startsWith('ml')) {
-            if (!/[.?!]$/.test(text)) text += '.';
+            if (!/[.?!]\$/.test(text)) text += '.';
         } else if (lang.startsWith('zh') || lang.startsWith('ja')) {
-            if (!/[。！？]$/.test(text)) text += '。';
+            if (!/[。！？]\$/.test(text)) text += '。';
         } else {
             text = text.charAt(0).toUpperCase() + text.slice(1);
-            if (!/[.?!]$/.test(text)) text += '.';
+            if (!/[.?!]\$/.test(text)) text += '.';
         }
 
         return formatMode2 === 'bullets' ? `• ${text}` : text;
@@ -2572,11 +2593,15 @@ recognition2.onresult = async event => {
         }
 
         if (newlyTranslatedText1) {
+            if (!window.speechSynthesis.speaking) {
+                window.speechSynthesis.resume();
+            }
+
             autoTellTimer2 = setTimeout(() => {
                 // Second PTT -> first output -> Tell 1.
                 speakNewText(newlyTranslatedText1, 1);
                 autoTellTimer2 = null;
-            }, AUTO_SPEECH_DELAY);
+            }, 800);
         }
 
         // Keep the existing second-output translation working.
@@ -2744,7 +2769,7 @@ recognition2.onresult = async event => {
     const tell2Btn = document.getElementById('tell2Btn');
     let secondSpeechRequestId = 0;
 
-    tell2Btn.addEventListener('click', () => {
+    tell2Btn.addEventListener('click', async () => {
         const text = output2Text.value.trim();
 
         if (!text) {
@@ -2762,6 +2787,8 @@ recognition2.onresult = async event => {
 
         synth.cancel();
         tell2Btn.classList.remove('animate-pulse', 'bg-indigo-200');
+
+        await getAvailableVoices();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = outputLanguage2.value;
