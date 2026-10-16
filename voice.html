@@ -1031,6 +1031,7 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
         let recognition = null;
         let finalTranscriptAccumulator = '';
         let isSecondPttTranslationInProgress = false; // <-- Added globally here
+        let isFirstPttTranslationInProgress = false; // suppresses input listener during workspace 1 PTT
         
         let micPermissionGranted = false;
 
@@ -1114,11 +1115,7 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
     window.setSpeakerLiveStatus?.(1, true);
 };
 
-recognition.onend = () => {
-    isListening = false;
-
-    window.setSpeakerLiveStatus?.(1, false);
-};
+/* recognition.onend is set below together with UI-state and badge cleanup */
         
             recognition.onresult = async (event) => {
                 let interim = '';
@@ -1134,6 +1131,8 @@ recognition.onend = () => {
 
                 
 if (newFinal.trim()) {
+  isFirstPttTranslationInProgress = true;
+  try {
     const spokenText = formatSpokenText(
         newFinal.trim(),
         currentFormattingMode
@@ -1164,7 +1163,7 @@ if (newFinal.trim()) {
     );
 
     // Translate into the second output and append the result.
-    const secondOutputTranslationSucceeded = await translateSecondOutput(
+    const secondOutputTranslationSucceeded = await window.translateSecondOutput(
         spokenText,
         speechLanguageSelect.value,
         true
@@ -1190,6 +1189,9 @@ if (newFinal.trim()) {
             autoTellTimer1 = null;
         }, AUTO_SPEECH_DELAY);
     }
+  } finally {
+    isFirstPttTranslationInProgress = false;
+  }
 }
 
 
@@ -1210,6 +1212,7 @@ if (newFinal.trim()) {
 
             recognition.onend = () => {
                 isListening = false;
+                window.setSpeakerLiveStatus?.(1, false);
                 updateUIState(false);
                 interimBadge.classList.add('hidden');
             };
@@ -1453,80 +1456,15 @@ function speakNewText(text, workspace) {
             }
         }
 
-        async function translateSecondOutput(
-    sourceTextOverride = null,
-    sourceLanguageOverride = null,
-    appendOutput = false
-) {
-    const text = (
-        sourceTextOverride ?? input2Text.value
-    ).trim();
-
-    if (!text) {
-        output2Text.value = "";
-        return;
-    }
-
-    const sourceLang = (
-        sourceLanguageOverride ?? speechLanguage2.value
-    ).split("-")[0];
-
-    const targetLang = outputLanguage2.value.split("-")[0];
-
-    if (appendOutput && sourceTextOverride) {
-        const existingInput = input2Text.value.trimEnd();
-        input2Text.value = existingInput ? `${existingInput}\n${sourceTextOverride}` : sourceTextOverride;
-    }
-
-    if (sourceLang === targetLang) {
-        output2Text.value =
-            appendOutput && output2Text.value.trim()
-                ? `${output2Text.value.trimEnd()}\n${text}`
-                : text;
-
-        return;
-    }
-
-    try {
-        const url =
-            "https://translate.googleapis.com/translate_a/single" +
-            "?client=gtx&sl=" +
-            encodeURIComponent(sourceLang) +
-            "&tl=" +
-            encodeURIComponent(targetLang) +
-            "&dt=t&q=" +
-            encodeURIComponent(text);
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        const translated = Array.isArray(data?.[0])
-            ? data[0]
-                .map(part => Array.isArray(part) ? part[0] || "" : "")
-                .join("")
-                .trim()
-            : "";
-
-        if (response.ok && translated) {
-            output2Text.value =
-                appendOutput && output2Text.value.trim()
-                    ? `${output2Text.value.trimEnd()}\n${translated}`
-                    : translated;
-        } else {
-            showToast("Second output translation unavailable.");
-        }
-    } catch (error) {
-        showToast(
-            "Second output translation failed. Check your internet connection."
-        );
-    }
-}
+        /* translateSecondOutput is now defined once, inside the second-
+           workspace IIFE, and exposed on window so all callers
+           (including workspace 1 PTT) share one implementation. */
 
         function formatSpokenText(text, mode) {
             const lang = speechLanguageSelect.value;
             if (lang.startsWith('hi') || lang.startsWith('bn') || lang.startsWith('mr')) {
                 if (!/[.?!|।]$/.test(text)) {
-                    text += '。';
+                    text += '।';
                 }
             } else if (lang.startsWith('ta') || lang.startsWith('te') || lang.startsWith('kn') || lang.startsWith('ml')) {
                 if (!/[.?!]$/.test(text)) {
@@ -1688,46 +1626,9 @@ function speakNewText(text, workspace) {
             updateCounts();
         });
 
-
-let manualTypeTranslateTimer = null;
-
-transcriptEditor.addEventListener('input', () => {
-    finalTranscriptAccumulator = transcriptEditor.value;
-
-    clearTimeout(manualTypeTranslateTimer);
-
-    // Do not let manual typing translation interfere with
-    // the second PTT's translation.
-    if (isSecondPttTranslationInProgress) {
-        return;
-    }
-
-    const typedText = transcriptEditor.value.trim();
-
-    if (!typedText) {
-        output2Text.value = '';
-        input2Text.value = '';
-        updateCounts();
-        return;
-    }
-
-    manualTypeTranslateTimer = setTimeout(async () => {
-        // Check again before starting the delayed translation.
-        if (isSecondPttTranslationInProgress) {
-            return;
-        }
-
-        const langName =
-            languageSelect.options[languageSelect.selectedIndex].text;
-
-        input2Text.value = typedText;
-
-        await translateSecondOutput(
-            typedText,
-            speechLanguageSelect.value
-        );
-    }, 700);
-});
+/* The single source-of-truth transcriptEditor input listener lives
+   inside the second-workspace IIFE below. It mirrors input2Text,
+   handles empty-text cleanup, and respects both PTT flags. */
 
         function getAvailableVoices() {
             return new Promise((resolve) => {
@@ -2353,11 +2254,13 @@ let firstToSecondTranslateTimer = null;
 
 
 transcriptEditor.addEventListener('input', () => {
+    finalTranscriptAccumulator = transcriptEditor.value;
+
     clearTimeout(firstToSecondTranslateTimer);
 
-    // Do not let automatic typing translation overwrite
-    // the second PTT's translation while it is running.
-    if (isSecondPttTranslationInProgress) {
+    // Do not let automatic typing translation overwrite either PTT's
+    // translation while it is running.
+    if (isSecondPttTranslationInProgress || isFirstPttTranslationInProgress) {
         return;
     }
 
@@ -2365,13 +2268,18 @@ transcriptEditor.addEventListener('input', () => {
 
     const typedText = transcriptEditor.value.trim();
 
+    // Mirror the transcript into input2Text so the second workspace
+    // shows what is being translated.
+    input2Text.value = transcriptEditor.value;
+
     if (!typedText) {
         output2Text.value = '';
+        updateCounts();
         return;
     }
 
     firstToSecondTranslateTimer = setTimeout(async () => {
-        if (isSecondPttTranslationInProgress) {
+        if (isSecondPttTranslationInProgress || isFirstPttTranslationInProgress) {
             return;
         }
 
@@ -2412,7 +2320,7 @@ transcriptEditor.addEventListener('input', () => {
                 'auto',
                 () =>
                     requestId === outputToFirstTranslateRequest &&
-                    output2Text.value.trim() !== typedText
+                    output2Text.value.trim() === typedText
             );
 
             if (requestId === outputToFirstTranslateRequest) {
@@ -2455,17 +2363,20 @@ transcriptEditor.addEventListener('input', () => {
         ptt2Button.classList.toggle('ring-emerald-400', listening2);
     }
 
-    function formatText2(text) {
+        function formatText2(text) {
         text = text.trim();
         if (!text) return '';
 
-        if (['hi', 'bn', 'mr'].some(code => speechLanguage2.value.startsWith(code))) {
-            if (!/[.?!|।]\$/.test(text)) text += '।';
-        } else if (['zh', 'ja'].some(code => speechLanguage2.value.startsWith(code))) {
-            if (!/[。！？]\$/.test(text)) text += '。';
+        const lang = speechLanguage2.value;
+        if (lang.startsWith('hi') || lang.startsWith('bn') || lang.startsWith('mr')) {
+            if (!/[.?!|।]$/.test(text)) text += '।';
+        } else if (lang.startsWith('ta') || lang.startsWith('te') || lang.startsWith('kn') || lang.startsWith('ml')) {
+            if (!/[.?!]$/.test(text)) text += '.';
+        } else if (lang.startsWith('zh') || lang.startsWith('ja')) {
+            if (!/[。！？]$/.test(text)) text += '。';
         } else {
             text = text.charAt(0).toUpperCase() + text.slice(1);
-            if (!/[.?!]\$/.test(text)) text += '.';
+            if (!/[.?!]$/.test(text)) text += '.';
         }
 
         return formatMode2 === 'bullets' ? `• ${text}` : text;
@@ -2586,18 +2497,13 @@ transcriptEditor.addEventListener('input', () => {
         recognition2.onstart = () => {
             listening2 = true;
             updateStatus2();
+            window.setSpeakerLiveStatus?.(2, true);
         };
-
-recognition2.onstart = () => {
-    listening2 = true;
-
-    window.setSpeakerLiveStatus?.(2, true);
-};
 
 recognition2.onend = () => {
     listening2 = false;
-
     window.setSpeakerLiveStatus?.(2, false);
+    updateStatus2();
 };
 recognition2.onresult = async event => {
     let spoken = '';
@@ -2693,10 +2599,7 @@ recognition2.onresult = async event => {
             }
         };
 
-        recognition2.onend = () => {
-            listening2 = false;
-            updateStatus2();
-        };
+        /* recognition2.onend is already defined above with full cleanup */
 
         speechLanguage2.addEventListener('change', () => {
             recognition2.lang = speechLanguage2.value;
@@ -2754,22 +2657,29 @@ recognition2.onresult = async event => {
 
         try {
             const url =
-                'https://api.mymemory.translated.net/get?q=' +
-                encodeURIComponent(text) +
-                '&langpair=' +
+                'https://translate.googleapis.com/translate_a/single' +
+                '?client=gtx&sl=' +
                 encodeURIComponent(sourceLang) +
-                '%7C' +
-                encodeURIComponent(target);
+                '&tl=' +
+                encodeURIComponent(target) +
+                '&dt=t&q=' +
+                encodeURIComponent(text);
 
             const response = await fetch(url);
             const data = await response.json();
-            const translated = data?.responseData?.translatedText?.trim();
+
+            const translated = Array.isArray(data?.[0])
+                ? data[0]
+                    .map(part => Array.isArray(part) ? part[0] || '' : '')
+                    .join('')
+                    .trim()
+                : '';
 
             if (requestId !== secondOutputTranslationRequestId) {
                 return false;
             }
 
-            if (response.ok && data.responseStatus === 200 && translated) {
+            if (response.ok && translated) {
                 output2Text.value =
                     appendOutput && output2Text.value.trim()
                         ? `${output2Text.value.trimEnd()}\n${translated}`
@@ -2800,6 +2710,11 @@ recognition2.onresult = async event => {
     translate2Btn.addEventListener('click', () => {
         translateSecondOutput();
     });
+
+    // Expose the single translateSecondOutput implementation so the
+    // first workspace (whose PTT handler lives in the outer script)
+    // can call the exact same function the second workspace uses.
+    window.translateSecondOutput = translateSecondOutput;
 
     let previousSecondOutputLanguage = outputLanguage2.value;
 
