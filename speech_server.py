@@ -19,11 +19,13 @@ app.add_middleware(
 
 # Multilingual speech recognition.
 # "small" is a reasonable starting point, but needs sufficient RAM.
+
 model = WhisperModel(
-    "small",
+    "tiny",
     device="cpu",
     compute_type="int8"
 )
+
 
 @app.post("/transcribe")
 async def transcribe(audio: UploadFile = File(...)):
