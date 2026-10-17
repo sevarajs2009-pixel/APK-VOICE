@@ -998,16 +998,15 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
 const languageSelect = document.getElementById('languageSelect');
 const speechLanguageSelect = document.getElementById('speechLanguageSelect');
 
-// Keep Tamil speech recognition independent of the output language.
+// Keep speech recognition set to Tamil independently
+// of the first and second output language selectors.
 speechLanguageSelect.value = 'ta-IN';
 
 languageSelect.addEventListener('change', () => {
-    // Changing the output language must not change the spoken language.
     updateUserNameDisplays();
 });
 
 outputLanguage2.addEventListener('change', updateUserNameDisplays);
-
 
 
         updateUserNameDisplays();
@@ -1317,9 +1316,7 @@ let autoTellTimer2 = null;
 const AUTO_SPEECH_DELAY = 1500; // Snappier 1.5s delay for automatic reading
 
 
-
-
-async function speakNewText(text, workspace) {
+function speakNewText(text, workspace) {
     const newText = (text || '').trim();
 
     if (!newText) return;
@@ -1334,55 +1331,43 @@ async function speakNewText(text, workspace) {
 
     const synth = window.speechSynthesis;
 
-    try {
-        // Wait for the browser's available speech voices.
-        await getAvailableVoices();
+    if (synth.speaking || synth.pending) {
+        synth.cancel();
+    }
 
-        // Create the utterance inside this function so it stays in scope.
-        const utterance = new SpeechSynthesisUtterance(newText);
+    const utterance = new SpeechSynthesisUtterance(newText);
 
-        if (workspace === 1) {
-            utterance.lang = languageSelect.value;
-            utterance.rate = Number(speechSpeed.value);
+    if (workspace === 1) {
+        utterance.lang = languageSelect.value;
+        utterance.rate = Number(speechSpeed.value);
 
-            if (!setBestVoice(utterance, languageSelect.value)) {
-                showToast('No installed speech voice supports this language.');
-                return;
-            }
-        } else if (workspace === 2) {
-            utterance.lang = outputLanguage2.value;
-            utterance.rate = Number(
-                document.getElementById('output2Speed').value
-            );
-
-            if (!setBestVoice(utterance, outputLanguage2.value)) {
-                showToast('No installed speech voice supports this language.');
-                return;
-            }
-        } else {
+        if (!setBestVoice(utterance, languageSelect.value)) {
+            showToast('No installed speech voice supports this language.');
             return;
         }
+    } else if (workspace === 2) {
+        utterance.lang = outputLanguage2.value;
+        utterance.rate = Number(
+            document.getElementById('output2Speed').value
+        );
 
-        utterance.onerror = (event) => {
-            console.error(
-                'Automatic speech utterance error:',
-                event.error
-            );
-        };
-
-        if (synth.speaking || synth.pending) {
-            synth.cancel();
+        if (!setBestVoice(utterance, outputLanguage2.value)) {
+            showToast('No installed speech voice supports this language.');
+            return;
         }
-
-        synth.resume();
-        synth.speak(utterance);
-
-    } catch (error) {
-        console.error('Automatic speech synthesis error:', error);
+    } else {
+        return;
     }
+
+    setTimeout(() => {
+        try {
+            synth.resume();
+            synth.speak(utterance);
+        } catch (e) {
+            console.error("Automatic speech synthesis error:", e);
+        }
+    }, 100);
 }
-
-
 
 
 
@@ -1726,7 +1711,9 @@ async function speakNewText(text, workspace) {
             return true;
         }
 
-        // UPDATED tellBtn click listener supporting speech speed & garbage collection safety
+        // FIXED tellBtn click listener supporting voice check, speed, garbage collection safety & request tracking
+        let speechRequestId = 0;
+
         tellBtn.addEventListener('click', async () => {
             const text = transcriptEditor.value.trim();
 
@@ -1741,35 +1728,38 @@ async function speakNewText(text, workspace) {
             }
 
             const synth = window.speechSynthesis;
+            const requestId = ++speechRequestId;
 
             if (synth.speaking || synth.pending) {
                 synth.cancel();
             }
+            tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
 
             await getAvailableVoices();
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = Number(speechSpeed.value);
-            setBestVoice(utterance, languageSelect.value);
+
+            if (!setBestVoice(utterance, languageSelect.value)) {
+                showToast("No installed speech voice supports this language.");
+                return;
+            }
 
             window.activeUtterance = utterance;
 
-            try {
-                synth.resume();
-            } catch (e) {
-                console.warn("Speech synthesis resume warning:", e);
-            }
-
             utterance.onstart = () => {
+                if (requestId !== speechRequestId) return;
                 showToast("Telling contents out loud...");
                 tellBtn.classList.add('animate-pulse', 'bg-indigo-200');
             };
 
             utterance.onend = () => {
+                if (requestId !== speechRequestId) return;
                 tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
             };
 
             utterance.onerror = (event) => {
+                if (requestId !== speechRequestId) return;
                 tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
                 if (event.error === 'canceled' || event.error === 'interrupted') {
                     return;
@@ -1778,7 +1768,9 @@ async function speakNewText(text, workspace) {
             };
 
             setTimeout(() => {
+                if (requestId !== speechRequestId) return;
                 try {
+                    synth.resume();
                     synth.speak(utterance);
                 } catch (e) {
                     console.error("Speech synthesis error:", e);
@@ -2523,23 +2515,18 @@ transcriptEditor.addEventListener('input', () => {
         });
     });
 
-    
-if (SpeechRecognition2) {
-    recognition2 = new SpeechRecognition2();
-    recognition2.continuous = true;
-    recognition2.interimResults = false;
-    recognition2.maxAlternatives = 1;
+    if (SpeechRecognition2) {
+        recognition2 = new SpeechRecognition2();
+        recognition2.continuous = true;
+        recognition2.interimResults = false;
+        recognition2.maxAlternatives = 1;
+        recognition2.lang = speechLanguage2.value;
 
-    // Keep second PTT speech input set to Tamil.
-    speechLanguage2.value = 'ta-IN';
-    recognition2.lang = speechLanguage2.value;
-
-    recognition2.onstart = () => {
-        listening2 = true;
-        updateStatus2();
-        window.setSpeakerLiveStatus?.(2, true);
-    };
-
+        recognition2.onstart = () => {
+            listening2 = true;
+            updateStatus2();
+            window.setSpeakerLiveStatus?.(2, true);
+        };
 
 recognition2.onend = () => {
     listening2 = false;
@@ -2789,6 +2776,7 @@ recognition2.onresult = async event => {
     const tell2Btn = document.getElementById('tell2Btn');
     let secondSpeechRequestId = 0;
 
+    // FIXED tell2Btn click listener supporting voice check, speed, garbage collection safety & request tracking
     tell2Btn.addEventListener('click', async () => {
         const text = output2Text.value.trim();
 
@@ -2818,6 +2806,8 @@ recognition2.onresult = async event => {
             showToast('No installed speech voice supports this language.');
             return;
         }
+
+        window.activeUtterance2 = utterance;
 
         utterance.onstart = () => {
             if (requestId !== secondSpeechRequestId) return;
