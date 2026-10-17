@@ -1676,36 +1676,49 @@ function speakNewText(text, workspace) {
         }
 
         function setBestVoice(utterance, selectedLanguage) {
-            const voices = window.speechSynthesis.getVoices();
-            const requested = (selectedLanguage || "en-US").toLowerCase();
-            const languageCode = requested.split("-")[0];
+    const synth = window.speechSynthesis;
+    const voices = synth.getVoices();
 
-            const voice =
-                voices.find(v =>
-                    v.lang.toLowerCase() === requested &&
-                    /natural|neural|google|microsoft/i.test(v.name)
-                ) ||
-                voices.find(v =>
-                    v.lang.toLowerCase() === requested
-                ) ||
-                voices.find(v =>
-                    v.lang.toLowerCase().split("-")[0] === languageCode &&
-                    /natural|neural|google|microsoft/i.test(v.name)
-                ) ||
-                voices.find(v =>
-                    v.lang.toLowerCase().split("-")[0] === languageCode
-                );
+    const requested = (selectedLanguage || "en-US").toLowerCase();
+    const languageCode = requested.split("-")[0];
 
-            utterance.lang = selectedLanguage || "en-US";
+    // Always keep the language selected in the app.
+    utterance.lang = selectedLanguage || "en-US";
 
-            if (!voice) {
-                return false;
-            }
+    // Prefer an exact language match.
+    let voice =
+        voices.find(v =>
+            v.lang.toLowerCase() === requested &&
+            /natural|neural|google|microsoft/i.test(v.name)
+        ) ||
+        voices.find(v =>
+            v.lang.toLowerCase() === requested
+        ) ||
+        voices.find(v =>
+            v.lang.toLowerCase().split("-")[0] === languageCode
+        );
 
-            utterance.voice = voice;
-            return true;
-        }
+    // If the selected language is unavailable, try the device's
+    // default available voice instead of immediately stopping.
+    if (!voice && voices.length > 0) {
+        voice = voices.find(v => v.default) || voices[0];
 
+        console.warn(
+            "Requested speech language is unavailable:",
+            requested,
+            "Using fallback voice:",
+            voice.lang,
+            voice.name
+        );
+    }
+
+    // Let the browser try its default voice if the voice list is empty.
+    if (voice) {
+        utterance.voice = voice;
+    }
+
+    return true;
+}
         // FIXED tellBtn click listener supporting voice check, speed, garbage collection safety & request tracking
         let speechRequestId = 0;
 
