@@ -1730,7 +1730,7 @@ function speakNewText(text, workspace) {
             }
             tellBtn.classList.remove('animate-pulse', 'bg-indigo-200');
 
-            await getAvailableVoices();
+            getAvailableVoices();
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = Number(speechSpeed.value);
@@ -1761,17 +1761,17 @@ function speakNewText(text, workspace) {
                 }
                 showToast("Error reading text.");
             };
+                
+            // Start speech directly from the user's tap on mobile.
+if (requestId !== speechRequestId) return;
 
-            setTimeout(() => {
-                if (requestId !== speechRequestId) return;
-                try {
-                    synth.resume();
-                    synth.speak(utterance);
-                } catch (e) {
-                    console.error("Speech synthesis error:", e);
-                    showToast("Could not start speech synthesis.");
-                }
-            }, 100);
+try {
+    synth.resume();
+    synth.speak(utterance);
+} catch (e) {
+    console.error("Speech synthesis error:", e);
+    showToast("Could not start speech synthesis.");
+}
         });
 
         liveShareBtn.addEventListener('click', () => {
@@ -2775,7 +2775,7 @@ recognition2.onresult = async event => {
         synth.cancel();
         tell2Btn.classList.remove('animate-pulse', 'bg-indigo-200');
 
-        await getAvailableVoices();
+        getAvailableVoices();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = outputLanguage2.value;
@@ -2808,15 +2808,16 @@ recognition2.onresult = async event => {
             showToast('Could not read the second output.');
         };
 
-        setTimeout(() => {
-            if (requestId !== secondSpeechRequestId) return;
-            try {
-                synth.resume();
-                synth.speak(utterance);
-            } catch (error) {
-                showToast('Could not start second output speech.');
-            }
-        }, 150);
+        // Start speech directly from the user's tap on mobile.
+if (requestId !== secondSpeechRequestId) return;
+
+try {
+    synth.resume();
+    synth.speak(utterance);
+} catch (error) {
+    console.error("Second output speech error:", error);
+    showToast('Could not start second output speech.');
+}
     });
 
     const copy2Btn = document.getElementById('copy2Btn');
