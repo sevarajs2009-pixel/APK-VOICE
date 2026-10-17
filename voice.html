@@ -993,9 +993,7 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
 const languageSelect = document.getElementById('languageSelect');
 const speechLanguageSelect = document.getElementById('speechLanguageSelect');
 
-// Keep speech recognition set to Tamil independently
-// of the first and second output language selectors.
-speechLanguageSelect.value = 'ta-IN';
+speechLanguageSelect.value = 'en-US';
 
 languageSelect.addEventListener('change', () => {
     updateUserNameDisplays();
