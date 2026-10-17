@@ -1000,13 +1000,23 @@ const speechLanguageSelect = document.getElementById('speechLanguageSelect');
 
 // Keep speech recognition set to Tamil independently
 // of the first and second output language selectors.
-speechLanguageSelect.value = 'ta-IN';
 
+speechLanguageSelect.value = languageSelect.value;
+
+// Keep speech recognition synchronized with the selected
+// first-output language.
 languageSelect.addEventListener('change', () => {
+    speechLanguageSelect.value = languageSelect.value;
+
+    if (recognition) {
+        recognition.lang = speechLanguageSelect.value;
+    }
+
     updateUserNameDisplays();
 });
 
 outputLanguage2.addEventListener('change', updateUserNameDisplays);
+
 
 
         updateUserNameDisplays();
