@@ -146,13 +146,8 @@ body {
     overflow-x: hidden;
 }
 
-/* VoiceToPara: preserve the existing design and arrange both workspaces
-   side by side when the screen is wide and in landscape orientation. */
-
-/* VoiceToPara: align both workspaces in landscape without redesigning */
-
-/* VoiceToPara: align the two workspaces in landscape */
-@media screen and (orientation: landscape) and (min-width: 700px) {
+/* VoiceToPara: align both workspaces in landscape (Threshold lowered to 480px for mobile devices) */
+@media screen and (orientation: landscape) and (min-width: 480px) {
     main {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -2056,32 +2051,16 @@ function speakNewText(text, workspace) {
   let landscapeRetryInProgress = false;
 
   async function enableVoiceToParaLandscape() {
-      if (landscapeRetryInProgress || voiceToParaLandscapeLocked) {
+      // Graceful orientation check to prevent hard failures on iOS/Mobile Chrome
+      if (!screen.orientation || typeof screen.orientation.lock !== 'function') {
           return;
       }
-
-      if (!screen.orientation || !screen.orientation.lock) {
-          return;
-      }
-
-      landscapeRetryInProgress = true;
 
       try {
-          if (!document.fullscreenElement &&
-              document.documentElement.requestFullscreen) {
-              try {
-                  await document.documentElement.requestFullscreen();
-              } catch (fullscreenError) {
-                  // Ignore
-              }
-          }
-
           await screen.orientation.lock("landscape");
           voiceToParaLandscapeLocked = true;
       } catch (error) {
-          // Ignore
-      } finally {
-          landscapeRetryInProgress = false;
+          voiceToParaLandscapeLocked = false;
       }
   }
 
