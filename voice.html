@@ -1326,7 +1326,9 @@ let autoTellTimer2 = null;
 const AUTO_SPEECH_DELAY = 1500; // Snappier 1.5s delay for automatic reading
 
 
-function speakNewText(text, workspace) {
+
+
+async function speakNewText(text, workspace) {
     const newText = (text || '').trim();
 
     if (!newText) return;
@@ -1341,43 +1343,55 @@ function speakNewText(text, workspace) {
 
     const synth = window.speechSynthesis;
 
-    if (synth.speaking || synth.pending) {
-        synth.cancel();
-    }
+    try {
+        // Wait for the browser's available speech voices.
+        await getAvailableVoices();
 
-    const utterance = new SpeechSynthesisUtterance(newText);
+        // Create the utterance inside this function so it stays in scope.
+        const utterance = new SpeechSynthesisUtterance(newText);
 
-    if (workspace === 1) {
-        utterance.lang = languageSelect.value;
-        utterance.rate = Number(speechSpeed.value);
+        if (workspace === 1) {
+            utterance.lang = languageSelect.value;
+            utterance.rate = Number(speechSpeed.value);
 
-        if (!setBestVoice(utterance, languageSelect.value)) {
-            showToast('No installed speech voice supports this language.');
+            if (!setBestVoice(utterance, languageSelect.value)) {
+                showToast('No installed speech voice supports this language.');
+                return;
+            }
+        } else if (workspace === 2) {
+            utterance.lang = outputLanguage2.value;
+            utterance.rate = Number(
+                document.getElementById('output2Speed').value
+            );
+
+            if (!setBestVoice(utterance, outputLanguage2.value)) {
+                showToast('No installed speech voice supports this language.');
+                return;
+            }
+        } else {
             return;
         }
-    } else if (workspace === 2) {
-        utterance.lang = outputLanguage2.value;
-        utterance.rate = Number(
-            document.getElementById('output2Speed').value
-        );
 
-        if (!setBestVoice(utterance, outputLanguage2.value)) {
-            showToast('No installed speech voice supports this language.');
-            return;
+        utterance.onerror = (event) => {
+            console.error(
+                'Automatic speech utterance error:',
+                event.error
+            );
+        };
+
+        if (synth.speaking || synth.pending) {
+            synth.cancel();
         }
-    } else {
-        return;
+
+        synth.resume();
+        synth.speak(utterance);
+
+    } catch (error) {
+        console.error('Automatic speech synthesis error:', error);
     }
-
-    setTimeout(() => {
-        try {
-            synth.resume();
-            synth.speak(utterance);
-        } catch (e) {
-            console.error("Automatic speech synthesis error:", e);
-        }
-    }, 100);
 }
+
+
 
 
 
