@@ -998,20 +998,11 @@ userNameInput2.addEventListener('input', updateUserNameDisplays);
 const languageSelect = document.getElementById('languageSelect');
 const speechLanguageSelect = document.getElementById('speechLanguageSelect');
 
-// Keep speech recognition set to Tamil independently
-// of the first and second output language selectors.
+// Keep Tamil speech recognition independent of the output language.
+speechLanguageSelect.value = 'ta-IN';
 
-speechLanguageSelect.value = languageSelect.value;
-
-// Keep speech recognition synchronized with the selected
-// first-output language.
 languageSelect.addEventListener('change', () => {
-    speechLanguageSelect.value = languageSelect.value;
-
-    if (recognition) {
-        recognition.lang = speechLanguageSelect.value;
-    }
-
+    // Changing the output language must not change the spoken language.
     updateUserNameDisplays();
 });
 
@@ -2532,18 +2523,23 @@ transcriptEditor.addEventListener('input', () => {
         });
     });
 
-    if (SpeechRecognition2) {
-        recognition2 = new SpeechRecognition2();
-        recognition2.continuous = true;
-        recognition2.interimResults = false;
-        recognition2.maxAlternatives = 1;
-        recognition2.lang = speechLanguage2.value;
+    
+if (SpeechRecognition2) {
+    recognition2 = new SpeechRecognition2();
+    recognition2.continuous = true;
+    recognition2.interimResults = false;
+    recognition2.maxAlternatives = 1;
 
-        recognition2.onstart = () => {
-            listening2 = true;
-            updateStatus2();
-            window.setSpeakerLiveStatus?.(2, true);
-        };
+    // Keep second PTT speech input set to Tamil.
+    speechLanguage2.value = 'ta-IN';
+    recognition2.lang = speechLanguage2.value;
+
+    recognition2.onstart = () => {
+        listening2 = true;
+        updateStatus2();
+        window.setSpeakerLiveStatus?.(2, true);
+    };
+
 
 recognition2.onend = () => {
     listening2 = false;
