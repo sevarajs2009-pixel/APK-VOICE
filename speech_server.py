@@ -5,6 +5,7 @@ import tempfile
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -17,6 +18,7 @@ app.add_middleware(
     allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
 
 # Multilingual speech recognition.
 # "small" is a reasonable starting point, but needs sufficient RAM.
