@@ -1077,6 +1077,188 @@ outputLanguage2.addEventListener('change', updateUserNameDisplays);
             }
         }
 
+        
+const WHISPER_URL = 'https://apk-voice-2.onrender.com/transcribe';
+
+const whisperRecorders = {
+    1: null,
+    2: null
+};
+
+const whisperStreams = {
+    1: null,
+    2: null
+};
+
+const whisperChunks = {
+    1: [],
+    2: []
+};
+
+const whisperBusy = {
+    1: false,
+    2: false
+};
+
+function setDetectedSpeechLanguage(language) {
+    const lang = (language || 'en').toLowerCase();
+
+    const languageMap = {
+        en: 'en-US',
+        ta: 'ta-IN',
+        hi: 'hi-IN',
+        te: 'te-IN',
+        kn: 'kn-IN',
+        ml: 'ml-IN',
+        bn: 'bn-IN',
+        mr: 'mr-IN',
+        ja: 'ja-JP',
+        zh: 'zh-CN',
+        fr: 'fr-FR',
+        de: 'de-DE',
+        es: 'es-ES'
+    };
+
+    const code = languageMap[lang] || `${lang}-${lang.toUpperCase()}`;
+
+    if (speechLanguageSelect) {
+        speechLanguageSelect.value = code;
+    }
+
+    if (typeof speechLanguage2 !== 'undefined' && speechLanguage2) {
+        speechLanguage2.value = code;
+    }
+
+    return code;
+}
+
+async function startWhisperRecording(workspace) {
+    if (whisperBusy[workspace] || whisperRecorders[workspace]) {
+        return false;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+
+        const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? { mimeType: 'audio/webm;codecs=opus' }
+            : {};
+
+        const recorder = new MediaRecorder(stream, options);
+
+        whisperStreams[workspace] = stream;
+        whisperChunks[workspace] = [];
+        whisperRecorders[workspace] = recorder;
+
+        recorder.ondataavailable = event => {
+            if (event.data && event.data.size > 0) {
+                whisperChunks[workspace].push(event.data);
+            }
+        };
+
+        recorder.onerror = event => {
+            console.error('[WHISPER RECORDER ERROR]', event.error);
+            showToast('Audio recording failed. Please try again.');
+        };
+
+        recorder.onstop = async () => {
+            const chunks = whisperChunks[workspace];
+            const mimeType = recorder.mimeType || 'audio/webm';
+            const blob = new Blob(chunks, { type: mimeType });
+
+            stream.getTracks().forEach(track => track.stop());
+            whisperStreams[workspace] = null;
+            whisperRecorders[workspace] = null;
+            whisperChunks[workspace] = [];
+
+            if (!blob.size) {
+                showToast('No audio captured. Please try again.');
+                return;
+            }
+
+            whisperBusy[workspace] = true;
+
+            try {
+                showToast('Detecting speech language…');
+
+                const formData = new FormData();
+                formData.append('audio', blob, 'speech.webm');
+
+                const response = await fetch(WHISPER_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Whisper server returned ${response.status}`);
+                }
+
+                const data = await response.json();
+                const transcript = (data.text || '').trim();
+
+                console.log('[WHISPER RESULT]', {
+                    workspace,
+                    language: data.language,
+                    text: transcript
+                });
+
+                if (!transcript) {
+                    showToast('No speech detected. Please try again.');
+                    return;
+                }
+
+                setDetectedSpeechLanguage(data.language);
+
+                const result = [{ transcript }];
+                result.isFinal = true;
+
+                const results = [result];
+                results.item = index => results[index];
+
+                const event = {
+                    resultIndex: 0,
+                    results
+                };
+
+                if (workspace === 1 && recognition?.onresult) {
+                    await recognition.onresult(event);
+                } else if (
+                    workspace === 2 &&
+                    typeof recognition2 !== 'undefined' &&
+                    recognition2?.onresult
+                ) {
+                    await recognition2.onresult(event);
+                }
+            } catch (error) {
+                console.error('[WHISPER REQUEST ERROR]', error);
+                showToast('Whisper connection failed. Check that port 8001 is running.');
+            } finally {
+                whisperBusy[workspace] = false;
+            }
+        };
+
+        recorder.start();
+        console.log(`[WHISPER] Workspace ${workspace} recording started.`);
+        return true;
+    } catch (error) {
+        console.error('[WHISPER START ERROR]', error);
+        showToast('Could not start microphone recording.');
+        return false;
+    }
+}
+
+function stopWhisperRecording(workspace) {
+    const recorder = whisperRecorders[workspace];
+
+    if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+        console.log(`[WHISPER] Workspace ${workspace} recording stopped.`);
+    }
+}
+
+
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             showToast("Web Speech API not supported in this browser. Try Chrome.");
@@ -1520,31 +1702,34 @@ function speakNewText(text, workspace) {
             }
         }
 
-        async function startListening() {
-            if (!recognition || isListening) return;
-            
-            const allowed = await ensureMicPermission();
-            if (!allowed) return;
+        
+async function startListening() {
+    if (isListening || whisperBusy[1] || whisperRecorders[1]) return;
 
-            try {
-                finalTranscriptAccumulator = paragraphOutput.value
-                    ? paragraphOutput.value.trim() + ' '
-                    : '';
-                recognition.start();
-            } catch (e) {
-                console.error(e);
-            }
-        }
+    const allowed = await ensureMicPermission();
+    if (!allowed) return;
 
-        function stopListening() {
-            window.setSpeakerLiveStatus?.(1, false);
-            if (!recognition || !isListening) return;
-            try {
-                recognition.stop();
-            } catch (e) {
-                console.error(e);
-            }
-        }
+    finalTranscriptAccumulator = paragraphOutput.value
+        ? paragraphOutput.value.trim() + ' '
+        : '';
+
+    const started = await startWhisperRecording(1);
+
+    if (started) {
+        isListening = true;
+        updateUIState(true);
+        window.setSpeakerLiveStatus?.(1, true);
+    }
+}
+
+        
+function stopListening() {
+    stopWhisperRecording(1);
+
+    isListening = false;
+    window.setSpeakerLiveStatus?.(1, false);
+    updateUIState(false);
+}
 
         function setPttMode(toggleMode) {
             isToggleMode = toggleMode;
