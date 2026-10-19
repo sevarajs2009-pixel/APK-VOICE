@@ -22,9 +22,8 @@ app.add_middleware(
 
 # Multilingual speech recognition.
 # "small" is a reasonable starting point, but needs sufficient RAM.
-
 model = WhisperModel(
-    "tiny",
+    "base",
     device="cpu",
     compute_type="int8"
 )
