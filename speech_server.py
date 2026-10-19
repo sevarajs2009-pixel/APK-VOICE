@@ -5,14 +5,15 @@ import tempfile
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
-
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5500",
         "http://127.0.0.1:5500",
         "https://apk-voice.onrender.com",
+        "https://apk-voice-3-0.onrender.com",
     ],
     allow_credentials=False,
     allow_methods=["POST", "OPTIONS"],
