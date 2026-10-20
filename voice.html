@@ -1266,10 +1266,11 @@ function stopWhisperRecording(workspace) {
             statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
             pttButton.disabled = true;
         } else {
-            recognition = new SpeechRecognition();
-            
-            recognition.lang = speechLanguageSelect.value;
-            recognition.maxAlternatives = 3;
+                    recognition = new SpeechRecognition();
+recognition.continuous = true;
+recognition.interimResults = false;
+recognition.lang = speechLanguageSelect.value;
+recognition.maxAlternatives = 1;
 
             speechLanguageSelect.addEventListener('change', () => {
                 if (!recognition) return;
@@ -1703,22 +1704,33 @@ function speakNewText(text, workspace) {
         }
 
         
+
 async function startListening() {
-    if (isListening || whisperBusy[1] || whisperRecorders[1]) return;
+    if (!recognition || isListening) return;
 
     const allowed = await ensureMicPermission();
-    if (!allowed) return;
+    if (!allowed || isListening) return;
 
     finalTranscriptAccumulator = paragraphOutput.value
         ? paragraphOutput.value.trim() + ' '
         : '';
 
-    const started = await startWhisperRecording(1);
+    try {
+        recognition.lang = speechLanguageSelect.value;
+        recognition.start();
+    } catch (error) {
+        console.error('[FIRST PTT START ERROR]', error);
+        showToast('Could not start speech recognition. Please try again.');
+    }
+}
 
-    if (started) {
-        isListening = true;
-        updateUIState(true);
-        window.setSpeakerLiveStatus?.(1, true);
+function stopListening() {
+    if (!recognition || !isListening) return;
+
+    try {
+        recognition.stop();
+    } catch (error) {
+        console.error('[FIRST PTT STOP ERROR]', error);
     }
 }
 
