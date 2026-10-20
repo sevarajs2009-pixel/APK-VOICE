@@ -44,13 +44,14 @@ async def transcribe(audio: UploadFile = File(...)):
             temp.write(await audio.read())
             temp_path = temp.name
 
-        segments, info = model.transcribe(
-            temp_path,
-            language="ta",  # Force Tamil transcription for this test
-            beam_size=5,
-            vad_filter=True
-        )
 
+segments, info = model.transcribe(
+    temp_path,
+    beam_size=1,
+    vad_filter=True
+)
+
+        
         text = "".join(segment.text for segment in segments).strip()
 
         return {
