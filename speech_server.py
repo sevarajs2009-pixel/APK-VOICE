@@ -1,5 +1,5 @@
-
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from faster_whisper import WhisperModel
 import tempfile
 import os
@@ -18,15 +18,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Multilingual speech recognition.
-# "small" is a reasonable starting point, but needs sufficient RAM.
+# Serve static frontend files and PWA requirements
+@app.get("/")
+async def serve_index():
+    return FileResponse("index.html")
 
+@app.get("/manifest.json")
+async def serve_manifest():
+    return FileResponse("manifest.json")
+
+@app.get("/pwabuilder-sw.js")
+async def serve_sw():
+    return FileResponse("pwabuilder-sw.js")
+
+# Multilingual speech recognition model
 model = WhisperModel(
     "tiny",
     device="cpu",
     compute_type="int8"
 )
-
 
 @app.post("/transcribe")
 async def transcribe(audio: UploadFile = File(...)):
