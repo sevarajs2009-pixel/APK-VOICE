@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Voice Assistant App",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "VoiceApp",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "description": "My voice application"
+}
