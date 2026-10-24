@@ -8,5 +8,13 @@
   "short_name": "VoiceApp",
   "start_url": "/",
   "theme_color": "#ffffff",
-  "description": "My voice application"
+  "description": "My voice application",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
